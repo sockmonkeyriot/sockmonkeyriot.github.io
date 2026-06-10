@@ -39,16 +39,26 @@ A trip page is a horizontal swipe deck of panels:
 - **Header (fixed):** trip kicker + panel counter, trip title, day tabs,
   amber progress bar.
 - **Cover:** the poster. Kicker line, big two-line serif title in one font
-  ("Origin" / "→ Destination" — the arrow lives in the data), the route line
-  (every waypoint, mono), 2–4 headline stats (miles, days, span), swipe hint.
-  Sunrise + ridge art, pine gradient. No subtitle.
+  ("Origin" / "→ Destination" — the arrow lives in the data), then a
+  **trip-overview map**: every day's route drawn end to end, with an amber
+  day-number badge at each day's *stopping point* (tap a badge or its route
+  line to jump to that day). A START pill marks the trip origin; the final
+  day folds into the END pill ("6 · END"), which jumps to the last day.
+  Below it the route line (every waypoint, mono), 2–4 headline stats
+  (miles, days, span), swipe hint. Sunrise + ridge art, pine gradient.
+  No subtitle.
 - **Day panel:** day header (Day N + date, route as the headline, miles/time
   chips), an italic editor's note (the day's shape and any timing logic), an
-  embedded **day route map** (Leaflet + OpenStreetMap: numbered markers for
-  the day's stops in order, first stop amber; tap a marker for the stop name +
-  Maps link; the leg line starts as a dashed connector and upgrades to the
-  real driving shape from OSRM, cached in localStorage), then a vertical
-  **timeline of stop cards** connected by a dashed route line.
+  embedded **day route map** (Leaflet + OpenStreetMap). The map shows the
+  day's full journey: an amber **START** pill where the day begins (the
+  previous day's overnight, or `meta.start` on day 1), numbered markers 1…N
+  for the intermediate stops, and an ink **END** pill on the day's final
+  stop. Tap any marker for the stop name + Maps link. The route line starts
+  as a dashed connector and upgrades to the real driving shape from OSRM,
+  cached in localStorage. Then a vertical **timeline of stop cards**
+  connected by a dashed route line — timeline markers carry the same
+  numbers as the map (1…N, with the day's last stop marked END), so list
+  and map read as one.
 - **Summary:** one row per day (date, destination, miles, where you're
   sleeping, the day's keystones), a total box, and an optional closing note
   (e.g., the return plan).
@@ -60,7 +70,7 @@ Each stop is a card on the day's timeline with an emoji marker. Fields:
 
 | Field  | Req | What it is |
 |--------|-----|------------|
-| `ic`   | ✓   | Emoji for the timeline marker (☕ 🍽️ 🍔 🍸 🦖 🅿️ 🚐 🏨 🚇 🏁 …) |
+| `ic`   | ✓   | Emoji for the stop (☕ 🍽️ 🍔 🍸 …). Stored but not currently rendered — timeline markers show stop numbers so the list matches the day map. |
 | `slot` | ✓   | Role in the day, small caps: `Rollout`, `Breakfast`, `Lunch`, `Stop`, `Stop · Optional`, `Drinks`, `Dinner`, `Dessert`, `Parking`, `Overnight · Free`, `Hotel · Optional`, `Logistics`, `Arrive` |
 | `nm`   | ✓   | The name. Specific beats generic. |
 | `t`    | ✓   | Category metadata: `coffee`, `lunch`, `dinner`, `drinks`, `dessert`, `stop`, `overnight`, `hotel`, `parking`, `logistics`. Stored but not currently rendered — the emoji marker carries the category visually. |
@@ -75,11 +85,13 @@ Each stop is a card on the day's timeline with an emoji marker. Fields:
 | `alt`  |     | "Also" footer: 1–3 genuinely different alternates, ` · ` separated, with ratings |
 
 Card interactions: each card has a **stamp** (✓) to mark a stop visited —
-strikes the title, fills the stamp, persists per-trip in `localStorage`.
-Each card also carries two map actions: the filled **Open in Maps** button
-(navigate to this stop) and an outline **↪ Leg from {previous stop}** link
-(Google Maps directions for exactly that leg; the chain crosses day
-boundaries, and the trip's first stop has none).
+the card collapses to just its slot + struck-through name (uncheck to expand
+it back), persisting per-trip in `localStorage`.
+Each card also carries two map actions on one line: the filled **Open in
+Maps** button (navigate to this stop) and an outline **↪ Just this leg**
+link (Google Maps directions from the previous stop to this one; the chain
+crosses day boundaries and begins at `meta.start`, so even the trip's first
+stop has one).
 
 ### Content conventions (from how Daniel travels)
 
@@ -105,6 +117,8 @@ const TRIP = {
     docTitle: "Salt Lake → Chicago · Road Tour",  // <title>
     kicker: "◆ Eastbound · Jun 12–17",            // header top-left, mono
     title: "Salt Lake City → Chicago",            // header title line
+    start: { nm: "Home · Salt Lake City",         // trip origin: day 1's START
+             ll: [40.7608,-111.8911], map: "…" }, //   pin + first leg's origin
     theme: { "--amber": "#d9802f" }  // optional CSS-var overrides, see below
   },
   cover: {

@@ -15,6 +15,37 @@ landing-page footer.
 
 ---
 
+## v0.5.0 — 2026-06-10
+
+Day maps now show the full day: START → numbered stops → END.
+
+**Changed**
+- Each day map gets a **START pill** (amber) where the day actually begins —
+  the previous day's overnight, or the new `meta.start` (home) on Day 1 — and
+  an **END pill** (ink) on the day's final stop. Intermediate stops are
+  numbered 1…N between them. The route line (and OSRM geometry) now starts at
+  START instead of the day's first stop.
+- New schema field `meta.start: { nm, ll, map? }` — the trip's origin point.
+  It also feeds the leg-link chain, so the trip's first stop now gets a leg
+  link too (previously it had none).
+- Leg-link label shortened to `↪ Just this leg` so both card buttons sit on
+  one line (the origin is implicit: the previous stop).
+- Stamping a stop now **collapses its card** to just the slot + name;
+  unstamping expands it back. Done stops stop shouting, the day gets shorter
+  as you live it.
+- SLC→Chicago: removed the Route A return note from the Trip Summary panel
+  (the engine's optional `summary.note` field remains for trips that want a
+  closing line).
+- **Timeline markers are now numbered** (1…N, last stop = END) instead of
+  emoji, mirroring the day map exactly — list and map read as one. The `ic`
+  emoji stays in the data as unrendered metadata.
+- **Cover gains a trip-overview map**: all days' routes end to end, with an
+  amber day-number badge at each day's stopping point — tap a badge or its
+  segment to jump to that day. A START pill marks the trip origin and the
+  final day folds into the END pill ("6 · END", tappable). Reuses the same
+  cached per-day OSRM geometry (no extra router calls).
+- Dropped the amber "first stop" marker — START replaces that role.
+
 ## v0.4.0 — 2026-06-10
 
 Embedded day-route maps and per-leg directions links.

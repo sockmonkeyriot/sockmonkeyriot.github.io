@@ -136,7 +136,15 @@
   .mapnum{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--ink);
     color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:500;
     display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--line-strong);}
-  .mapnum.first{background:var(--amber);}
+  .mapflag{height:20px;padding:0 7px;border-radius:7px;border:2px solid var(--ink);
+    font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;font-weight:500;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--line-strong);}
+  .mapflag.start{background:var(--amber);color:#2a2017;}
+  .mapflag.end{background:#2a2017;color:#f1e7d5;}
+  .mapday{width:26px;height:26px;border-radius:50%;background:var(--amber);border:2px solid var(--ink);
+    color:#2a2017;font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 rgba(0,0,0,.35);}
+  .daymap.cover{margin:22px 0 0;height:230px;position:relative;z-index:1;}
   .daymap .leaflet-popup-content{font-family:var(--sans);font-size:12.5px;margin:10px 14px;}
   .daymap .leaflet-popup-content b{font-family:var(--serif);font-size:14px;}
   .daymap .leaflet-popup-content a{color:var(--pine);font-family:var(--mono);font-size:11px;}
@@ -155,7 +163,9 @@
   .stop:last-child::before{display:none;}
   .marker{position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;
     background:var(--card);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
-    font-size:16px;box-shadow:2px 2px 0 var(--line-strong);z-index:2;}
+    font-family:var(--mono);font-weight:500;font-size:15px;color:var(--ink);
+    box-shadow:2px 2px 0 var(--line-strong);z-index:2;}
+  .marker.mend{font-size:8.5px;letter-spacing:.05em;background:#2a2017;color:#f1e7d5;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:13px;
     padding:13px 14px 14px;box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);position:relative;}
   .card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
@@ -167,12 +177,12 @@
   .addr svg{width:13px;height:13px;flex:0 0 auto;}
   .alt{font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);}
   .alt b{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--clay);}
-  .maplink{display:inline-flex;align-items:center;gap:6px;margin-top:11px;
+  .maplink{display:inline-flex;align-items:center;vertical-align:top;gap:6px;margin-top:11px;
     font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;
-    background:var(--pine);color:#f1e7d5;padding:8px 12px;border-radius:8px;transition:.18s;}
+    background:var(--pine);color:#f1e7d5;padding:8px 10px;border-radius:8px;transition:.18s;}
   .maplink:hover{background:var(--pine-deep);transform:translateY(-1px);}
   .maplink svg{width:13px;height:13px;}
-  .maplink.leg{background:transparent;color:var(--pine);border:1.5px solid var(--pine);padding:6.5px 10.5px;margin-left:8px;}
+  .maplink.leg{background:transparent;color:var(--pine);border:1.5px solid var(--pine);padding:6.5px 8.5px;margin-left:8px;}
   .warn{background:#fbeede;border:1px solid #e7b98c;color:#9a4a1c;}
   .stamp{flex:0 0 auto;cursor:pointer;border:1.5px dashed var(--line-strong);background:transparent;
     width:30px;height:30px;border-radius:50%;color:var(--line-strong);font-size:13px;
@@ -180,6 +190,8 @@
   .card.done{background:#eef0e4;}
   .card.done .nm{text-decoration:line-through;text-decoration-color:var(--ink-soft);color:var(--ink-soft);}
   .card.done .stamp{border-style:solid;border-color:var(--pine);background:var(--pine);color:#f1e7d5;transform:rotate(-8deg);}
+  /* stamped = collapsed: only the slot + name remain */
+  .card.done .when,.card.done .why,.card.done .addr,.card.done .maplink,.card.done .alt{display:none;}
 
   /* ---------- summary ---------- */
   .sumwrap{padding:24px 20px;}
@@ -245,6 +257,8 @@ const TRIP = {
     docTitle: "Demo Trip · Road Tour",     // browser tab title
     kicker: "◆ Demo · Two Days",           // header top-left, mono small caps
     title: "Origin → Destination",         // header title line
+    start: { nm: "Home Base · Origin City", ll: [40.7300,-111.8500],
+             map: "https://www.google.com/maps/search/?api=1&query=example" },  // day 1 START pin + first leg origin
     // theme: { "--amber": "#c46a4d" },    // optional: per-trip CSS-var overrides
   },
 
@@ -360,9 +374,10 @@ const TRIP = {
 
 const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>`;
 
-// flat stop list across all days — used for prev-stop leg links
-const ALL = []; TRIP.days.forEach(d=>d.stops.forEach(s=>ALL.push(s)));
-let gi = 0;
+// flat list (optional trip start + every stop) — used for prev-stop leg links
+const ALL = TRIP.meta.start ? [TRIP.meta.start] : [];
+TRIP.days.forEach(d=>d.stops.forEach(s=>ALL.push(s)));
+let gi = TRIP.meta.start ? 1 : 0;
 function locStr(s){ return s.ll ? s.ll[0]+','+s.ll[1] : encodeURIComponent(s.addr||s.nm); }
 
 document.title = TRIP.meta.docTitle || TRIP.meta.title;
@@ -388,6 +403,7 @@ cover.innerHTML = `
       <div class="kick">${C.kick}</div>
       <h1>${C.titleTop}<br>${C.titleBottom}</h1>
     </div>
+    <div class="daymap cover" id="map-cover"></div>
     <div>
       <div class="routeline">${C.routeline}</div>
       <div class="covermeta">${C.stats.map(s=>`<div><div class="n">${s.n}</div><div class="l">${s.l}</div></div>`).join('')}</div>
@@ -408,9 +424,10 @@ TRIP.days.forEach((day, di)=>{
     const alt = s.alt ? `<div class="alt"><b>Also</b><br>${s.alt}</div>`:'';
     const map = s.map ? `<a class="maplink${s.warn?' warn':''}" href="${s.map}" target="_blank" rel="noopener">${PIN} Open in Maps</a>`:'';
     const prev = ALL[gi-1]; gi++;
-    const leg = prev ? `<a class="maplink leg" href="https://www.google.com/maps/dir/?api=1&origin=${locStr(prev)}&destination=${locStr(s)}" target="_blank" rel="noopener">↪ Leg from ${prev.nm}</a>`:'';
+    const leg = prev ? `<a class="maplink leg" href="https://www.google.com/maps/dir/?api=1&origin=${locStr(prev)}&destination=${locStr(s)}" target="_blank" rel="noopener">↪ Just this leg</a>`:'';
+    const last = si===day.stops.length-1;
     return `<div class="stop">
-      <div class="marker">${s.ic}</div>
+      <div class="marker${last?' mend':''}">${last?'END':si+1}</div>
       <div class="card${done}" data-id="${id}">
         <div class="top">
           <div>
@@ -440,6 +457,12 @@ TRIP.days.forEach((day, di)=>{
 
 // ---- day route maps (Leaflet + OSM; degrades to nothing offline) ----
 const dayMaps = {};
+// where a day begins: yesterday's last mapped stop, or meta.start on day 1
+function dayStartOf(di){
+  return di===0
+    ? (TRIP.meta.start && TRIP.meta.start.ll ? TRIP.meta.start : null)
+    : [...TRIP.days[di-1].stops].reverse().find(s=>s.ll) || null;
+}
 function geomKey(di, pts){
   return TRIP.meta.id+'_geom_d'+(di+1)+'_'+pts.map(s=>s.ll.map(n=>n.toFixed(3)).join(',')).join(';');
 }
@@ -460,26 +483,76 @@ function initDayMap(panelIdx){
   if(di<0 || di>=TRIP.days.length || dayMaps[di] || !window.L) return;
   const el = document.getElementById('map-d'+di);
   if(!el) return;
-  const pts = TRIP.days[di].stops.filter(s=>s.ll);
-  if(!pts.length) return;
+  const stops = TRIP.days[di].stops.filter(s=>s.ll);
+  if(!stops.length) return;
+  const start = dayStartOf(di);
+  const seq = start ? [start, ...stops] : stops;
   const m = L.map(el,{scrollWheelZoom:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     {maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
-  pts.forEach((s,i)=>{
-    L.marker(s.ll,{icon:L.divIcon({className:'', html:`<div class="mapnum${i===0?' first':''}">${i+1}</div>`,
-      iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-14]})})
+  const mk = (s, html, size, anchor, pa, z)=>
+    L.marker(s.ll,{icon:L.divIcon({className:'', html, iconSize:size, iconAnchor:anchor, popupAnchor:pa}), zIndexOffset:z||0})
       .addTo(m)
       .bindPopup(`<b>${s.nm}</b>${s.map?`<br><a href="${s.map}" target="_blank" rel="noopener">Open in Maps ▸</a>`:''}`);
-  });
-  const dashed = L.polyline(pts.map(s=>s.ll),{color:'#1f4a3a',weight:3,opacity:.7,dashArray:'6 8'}).addTo(m);
-  m.fitBounds(L.latLngBounds(pts.map(s=>s.ll)).pad(0.18));
+  if(start) mk(start, `<div class="mapflag start">START</div>`, [46,20],[23,10],[0,-12],200);
+  stops.slice(0,-1).forEach((s,i)=>mk(s, `<div class="mapnum">${i+1}</div>`, [24,24],[12,12],[0,-14]));
+  mk(stops[stops.length-1], `<div class="mapflag end">END</div>`, [46,20],[23,10],[0,-12],200);
+  const dashed = L.polyline(seq.map(s=>s.ll),{color:'#1f4a3a',weight:3,opacity:.7,dashArray:'6 8'}).addTo(m);
+  const bounds = L.latLngBounds(seq.map(s=>s.ll)).pad(0.18);
+  m.fitBounds(bounds);
   dayMaps[di] = m;
-  setTimeout(()=>m.invalidateSize(), 60);
-  routeGeom(di, pts).then(geo=>{
+  setTimeout(()=>{ m.invalidateSize(); m.fitBounds(bounds); }, 60);
+  routeGeom(di, seq).then(geo=>{
     if(geo){ m.removeLayer(dashed); L.polyline(geo,{color:'#1f4a3a',weight:4,opacity:.85}).addTo(m); }
   }).catch(()=>{});
 }
-window.addEventListener('load', ()=>initDayMap(cur));
+// ---- cover overview map: every day's route, labeled by day number ----
+let coverMap = null;
+function initCoverMap(){
+  if(coverMap || !window.L) return;
+  const el = document.getElementById('map-cover');
+  if(!el) return;
+  const allPts = [];
+  const m = L.map(el,{scrollWheelZoom:false});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  TRIP.days.forEach((day, di)=>{
+    const stops = day.stops.filter(s=>s.ll);
+    if(!stops.length) return;
+    const start = dayStartOf(di);
+    const seq = start ? [start, ...stops] : stops;
+    seq.forEach(s=>allPts.push(s.ll));
+    let line = L.polyline(seq.map(s=>s.ll),{color:'#1f4a3a',weight:3,opacity:.7,dashArray:'6 8'}).addTo(m);
+    line.on('click',()=>goTo(di+1));
+    if(di < TRIP.days.length-1){       // day badge at the day's stopping point (final day folds into the END pill)
+      const lbl = L.marker(stops[stops.length-1].ll,
+        {icon:L.divIcon({className:'', html:`<div class="mapday">${di+1}</div>`, iconSize:[26,26],
+          iconAnchor:[13, di%2 ? 33 : -7]}), zIndexOffset:300}).addTo(m);  // alternate below/above the line
+      lbl.on('click',()=>goTo(di+1));
+    }
+    routeGeom(di, seq).then(geo=>{
+      if(geo){
+        m.removeLayer(line);
+        line = L.polyline(geo,{color:'#1f4a3a',weight:4,opacity:.85}).addTo(m);
+        line.on('click',()=>goTo(di+1));
+      }
+    }).catch(()=>{});
+  });
+  if(!allPts.length){ m.remove(); el.style.display='none'; return; }
+  if(TRIP.meta.start && TRIP.meta.start.ll)
+    L.marker(TRIP.meta.start.ll,{icon:L.divIcon({className:'', html:`<div class="mapflag start">START</div>`, iconSize:[46,20], iconAnchor:[23,10]}), zIndexOffset:200}).addTo(m);
+  const lastStops = TRIP.days[TRIP.days.length-1].stops.filter(s=>s.ll);
+  if(lastStops.length){
+    const endM = L.marker(lastStops[lastStops.length-1].ll,
+      {icon:L.divIcon({className:'', html:`<div class="mapflag end">${TRIP.days.length} · END</div>`, iconSize:[64,20], iconAnchor:[32,10]}), zIndexOffset:400}).addTo(m);
+    endM.on('click',()=>goTo(TRIP.days.length));
+  }
+  const bounds = L.latLngBounds(allPts).pad(0.12);
+  m.fitBounds(bounds);
+  coverMap = m;
+  setTimeout(()=>{ m.invalidateSize(); m.fitBounds(bounds); }, 60);
+}
+window.addEventListener('load', ()=>{ initDayMap(cur); initCoverMap(); });
 
 // ---- build summary ----
 const S = TRIP.summary;
@@ -525,6 +598,7 @@ function update(){
     panels.forEach((p,x)=>{ if(x===i) p.classList.add('show'); });
   }
   initDayMap(cur);
+  if(cur===0) initCoverMap();
   // stagger cards in active panel
   const stops=panels[cur].querySelectorAll('.stop');
   stops.forEach((s,x)=>s.style.transitionDelay=(0.05*x)+'s');
