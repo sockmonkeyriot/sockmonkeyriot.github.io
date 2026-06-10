@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#163528">
+<title>Salt Lake → Chicago · Road Tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --paper:#f1e7d5;
+    --card:#faf4e8;
+    --ink:#2a2017;
+    --ink-soft:#7a6a55;
+    --pine:#1f4a3a;
+    --pine-deep:#15342a;
+    --amber:#d9802f;
+    --clay:#b1442a;
+    --plum:#6a4a6e;
+    --steel:#3b5a6b;
+    --line:rgba(42,32,23,.16);
+    --line-strong:rgba(42,32,23,.3);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #244b3f 0%, #16332a 55%, #0f261f 100%);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* phone frame on desktop, full-bleed on mobile */
+  #app{
+    position:relative;
+    width:min(100vw,480px);
+    height:100dvh;
+    max-height:100dvh;
+    background:var(--paper);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+  }
+  @media(min-width:520px){
+    #app{height:min(100dvh,920px);border-radius:26px;border:1px solid rgba(0,0,0,.25);}
+  }
+  /* paper grain */
+  #app::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:50;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;opacity:.6;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    position:relative;z-index:30;
+    background:var(--pine-deep);color:#f1e7d5;
+    padding:10px 16px 9px;
+    flex:0 0 auto;
+    border-bottom:2px solid rgba(0,0,0,.25);
+  }
+  .progress{position:absolute;top:0;left:0;height:3px;background:var(--amber);width:0;transition:width .35s ease;z-index:40;}
+  .brand{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .brand .mk{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);}
+  .brand .ct{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:rgba(241,231,213,.7);}
+  .title{font-family:var(--serif);font-weight:600;font-size:17px;line-height:1.05;margin:1px 0 8px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tabs{display:flex;gap:6px;}
+  .tab{
+    flex:1;cursor:pointer;border:none;
+    font-family:var(--mono);font-size:11px;font-weight:500;
+    padding:5px 0;border-radius:7px;
+    background:rgba(241,231,213,.1);color:rgba(241,231,213,.6);
+    transition:.2s;letter-spacing:.04em;
+  }
+  .tab.active{background:var(--amber);color:#2a2017;}
+
+  /* ---------- deck ---------- */
+  .deck{
+    flex:1 1 auto;display:flex;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+  .deck::-webkit-scrollbar{display:none;}
+  .panel{
+    flex:0 0 100%;height:100%;overflow-y:auto;scroll-snap-align:start;
+    -webkit-overflow-scrolling:touch;
+    padding:0 0 96px;
+  }
+  .panel::-webkit-scrollbar{display:none;}
+
+  /* ---------- cover ---------- */
+  .cover{
+    min-height:100%;display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(170deg,#1f4a3a 0%,#15342a 60%,#0f261f 100%);
+    color:#f1e7d5;padding:30px 26px 40px;position:relative;overflow:hidden;
+  }
+  .sun{position:absolute;top:54px;right:-40px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,#e89a45 0%,#d9802f 55%,transparent 72%);opacity:.9;filter:blur(.3px);}
+  .ridge{position:absolute;left:0;right:0;bottom:120px;height:120px;
+    background:
+      linear-gradient(135deg,transparent 49.6%,#0f261f 50%) -20px 0/120px 120px repeat-x,
+      linear-gradient(-135deg,transparent 49.6%,#0f261f 50%) 40px 0/160px 120px repeat-x;
+    opacity:.5;}
+  .cover .kick{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);position:relative;}
+  .cover h1{font-family:var(--serif);font-weight:900;font-size:44px;line-height:.92;margin:10px 0 0;position:relative;letter-spacing:-.01em;}
+  .covermeta{position:relative;display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:auto;padding-top:30px;}
+  .covermeta .n{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1;}
+  .covermeta .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(241,231,213,.65);margin-top:4px;}
+  .routeline{position:relative;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:#cdbb9e;margin-top:22px;border-top:1px dashed rgba(241,231,213,.3);padding-top:16px;}
+  .swipehint{position:relative;margin-top:20px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--amber);display:flex;align-items:center;gap:8px;}
+  .swipehint .arr{animation:nudge 1.4s ease-in-out infinite;}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+
+  /* ---------- day header ---------- */
+  .dayhead{padding:22px 22px 14px;background:var(--paper);position:relative;}
+  .dayhead .dno{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--clay);text-transform:uppercase;}
+  .dayhead h2{font-family:var(--serif);font-weight:600;font-size:25px;line-height:1.05;margin:5px 0 2px;}
+  .dayhead .rt{font-family:var(--sans);font-size:13px;color:var(--ink-soft);font-weight:500;line-height:1.35;}
+  .daymeta{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
+  .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 9px;border-radius:6px;background:#e8dcc4;color:#5d4f3c;display:inline-flex;align-items:center;gap:5px;}
+  .chip.km{background:var(--pine);color:#f1e7d5;}
+  .note{margin:13px 22px 4px;font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);line-height:1.4;border-left:2px solid var(--amber);padding-left:11px;}
+
+  /* ---------- day route map ---------- */
+  .daymap{margin:13px 22px 4px;height:210px;border:1px solid var(--line);border-radius:13px;
+    box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);
+    overflow:hidden;position:relative;z-index:1;background:#e8e0cf;}
+  .mapnum{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--ink);
+    color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:500;
+    display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--line-strong);}
+  .mapnum.first{background:var(--amber);}
+  .daymap .leaflet-popup-content{font-family:var(--sans);font-size:12.5px;margin:10px 14px;}
+  .daymap .leaflet-popup-content b{font-family:var(--serif);font-size:14px;}
+  .daymap .leaflet-popup-content a{color:var(--pine);font-family:var(--mono);font-size:11px;}
+  .daymap .leaflet-popup-content-wrapper{background:var(--card);color:var(--ink);border-radius:10px;border:1px solid var(--line);}
+  .daymap .leaflet-popup-tip{background:var(--card);}
+
+  /* ---------- timeline / cards ---------- */
+  .timeline{padding:8px 18px 0;position:relative;}
+  .stop{position:relative;padding-left:46px;padding-bottom:18px;
+    opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease;}
+  .panel.show .stop{opacity:1;transform:none;}
+  .stop::before{ /* route line */
+    content:"";position:absolute;left:17px;top:30px;bottom:-4px;width:2px;
+    background:repeating-linear-gradient(var(--line-strong) 0 5px,transparent 5px 11px);
+  }
+  .stop:last-child::before{display:none;}
+  .marker{position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;
+    background:var(--card);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-size:16px;box-shadow:2px 2px 0 var(--line-strong);z-index:2;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:13px 14px 14px;box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);position:relative;}
+  .card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .slot{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);}
+  .nm{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.12;margin:3px 0 0;letter-spacing:.005em;}
+  .when{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--clay);margin:8px 0 5px;}
+  .why{font-size:13.5px;line-height:1.48;color:#3c3024;margin:0;}
+  .addr{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:10px;font-family:var(--mono);}
+  .addr svg{width:13px;height:13px;flex:0 0 auto;}
+  .alt{font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);}
+  .alt b{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--clay);}
+  .maplink{display:inline-flex;align-items:center;gap:6px;margin-top:11px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;
+    background:var(--pine);color:#f1e7d5;padding:8px 12px;border-radius:8px;transition:.18s;}
+  .maplink:hover{background:var(--pine-deep);transform:translateY(-1px);}
+  .maplink svg{width:13px;height:13px;}
+  .maplink.leg{background:transparent;color:var(--pine);border:1.5px solid var(--pine);padding:6.5px 10.5px;margin-left:8px;}
+  .warn{background:#fbeede;border:1px solid #e7b98c;color:#9a4a1c;}
+  .stamp{flex:0 0 auto;cursor:pointer;border:1.5px dashed var(--line-strong);background:transparent;
+    width:30px;height:30px;border-radius:50%;color:var(--line-strong);font-size:13px;
+    display:flex;align-items:center;justify-content:center;transition:.18s;}
+  .card.done{background:#eef0e4;}
+  .card.done .nm{text-decoration:line-through;text-decoration-color:var(--ink-soft);color:var(--ink-soft);}
+  .card.done .stamp{border-style:solid;border-color:var(--pine);background:var(--pine);color:#f1e7d5;transform:rotate(-8deg);}
+
+  /* ---------- summary ---------- */
+  .sumwrap{padding:24px 20px;}
+  .sumwrap h2{font-family:var(--serif);font-weight:900;font-size:30px;margin:6px 0 4px;}
+  .sumwrap .kick{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--clay);}
+  .srow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:12px;
+    box-shadow:0 8px 20px -16px rgba(42,32,23,.5);}
+  .srow .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .srow .d{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay);}
+  .srow .dest{font-family:var(--serif);font-weight:600;font-size:18px;margin:2px 0 0;}
+  .srow .mi{font-family:var(--mono);font-size:11px;color:var(--pine);white-space:nowrap;}
+  .srow .lo{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .srow .ks{font-size:12.5px;color:#3c3024;margin-top:6px;line-height:1.4;}
+  .total{margin-top:18px;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink);background:#e8dcc4;border-radius:10px;padding:13px;}
+  .total b{font-family:var(--serif);font-size:20px;display:block;margin-bottom:3px;letter-spacing:0;}
+  .ret{margin-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);text-align:center;line-height:1.45;padding:0 6px;}
+
+  /* ---------- bottom nav ---------- */
+  .nav{position:absolute;left:0;right:0;bottom:0;z-index:35;display:flex;align-items:center;gap:10px;
+    padding:11px 16px calc(11px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg,var(--paper) 70%,transparent);}
+  .nav button{font-family:var(--mono);font-size:12px;letter-spacing:.05em;cursor:pointer;
+    border:1.5px solid var(--ink);background:var(--card);color:var(--ink);
+    padding:10px 14px;border-radius:10px;transition:.15s;display:flex;align-items:center;gap:6px;}
+  .nav button:active{transform:translateY(1px);}
+  .nav button[disabled]{opacity:.32;pointer-events:none;}
+  .nav .where{flex:1;text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-soft);}
+  .nav .prim{background:var(--amber);border-color:var(--ink);font-weight:500;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="progress" id="prog"></div>
+    <div class="brand">
+      <span class="mk" id="mk"></span>
+      <span class="ct" id="ctr">00 / 00</span>
+    </div>
+    <div class="title" id="ttl"></div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <div class="deck" id="deck"></div>
+
+  <div class="nav">
+    <button id="prev" aria-label="Previous">◀ Prev</button>
+    <span class="where" id="where">Cover</span>
+    <button id="next" class="prim" aria-label="Next">Next ▶</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   TRIP DATA — everything specific to this trip lives in this object.
+   Schema reference: ../TEMPLATE.md · Engine canonical copy: ../template/
+   ════════════════════════════════════════════════════════════════════ */
+const TRIP = {
+  meta: {
+    id: "2026-slc-to-chicago",
+    storageKey: "slc2chi_done",   // legacy key — keeps existing visited-stamps
+    docTitle: "Salt Lake → Chicago · Road Tour",
+    kicker: "◆ Eastbound · Jun 12–17",
+    title: "Salt Lake City → Chicago"
+  },
+
+  cover: {
+    kick: "A van road trip · Jun 12–17, 2026",
+    titleTop: "Salt Lake",
+    titleBottom: "→ Chicago",
+    routeline: "SLC → Vernal → Hayden → Steamboat → Denver → Limon → Salina → Lawrence → Kansas City → St. Louis → Springfield → O'Hare → Logan Square",
+    stats: [
+      { n: "~1,580", l: "Total miles" },
+      { n: "6", l: "Driving days" },
+      { n: "Fri–Wed", l: "Morning → evening" }
+    ]
+  },
+
+  days: [
+    { dow:"Friday · Jun 12", route:"Salt Lake City → Vernal → Hayden, CO", miles:"~310 mi", time:"~5h30m drive",
+      short:"Hayden",
+      note:"1 PM rollout — lunch at home, US-40 the whole way: Strawberry Reservoir, dinosaur country, then down the Yampa Valley. Sleep in Hayden; Steamboat waits for breakfast tomorrow.",
+      sum:{ sd:"Fri 6/12", dest:"Hayden, CO", mi:"~310 mi", lo:"Yampa River SP HQ — reserved (~$43, showers)", ks:"1 PM rollout · Dinosaur Quarry shuttle (last out 5 PM) · Yampa Valley Brewing pizza" },
+      stops:[
+        {ic:"🛣️",slot:"Stop",nm:"Strawberry Reservoir Overlook",t:"stop",ll:[40.1744,-111.1402],when:"~2:20 PM (1h20m in) · keep it to 10 min",
+         why:"Big high-mountain water at 7,600 ft, right off US-40. Quick leg-stretch — but if you're behind, skip it: the quarry shuttle clock is the day's only deadline.",
+         map:"https://www.google.com/maps/search/?api=1&query=Strawberry+Reservoir+overlook+US-40+UT"},
+        {ic:"🦖",slot:"Stop",nm:"Dinosaur NM · Quarry Exhibit Hall",t:"stop",ll:[40.4406,-109.3013],when:"~4:20 PM at the Visitor Center · LAST SHUTTLE 5 PM · $25/vehicle",
+         why:"A building wrapped around a cliff face of ~1,500 Jurassic bones still in the rock — you can touch a 149-million-year-old femur. Summer access is shuttle-only from the Visitor Center (every 15 min, last out 5 PM, hall closes 5:30). Tight but makeable — gas-splash Vernal, don't linger.",
+         addr:"11625 E 1500 S, Jensen, UT",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Quarry+Exhibit+Hall+Dinosaur+National+Monument+Jensen+UT"},
+        {ic:"🍽️",slot:"Dinner",nm:"Yampa Valley Brewing Co.",t:"dinner",ll:[40.4958,-107.2579],when:"~7:30 PM (Hayden) · Fri 12–9 PM — land by 7:45",
+         why:"Taproom in Hayden's historic granary district — house ales on the patio with Embers wood-fired pizza (truck on-site or delivered to the taproom). Easy, characterful, and five minutes from where you sleep.",
+         addr:"200 N Walnut St, Hayden, CO",rate:"4.3",
+         map:"https://www.google.com/maps/search/?api=1&query=Yampa+Valley+Brewing+200+N+Walnut+St+Hayden+CO",
+         alt:"Eat 20 min earlier in Craig instead: 518 Wine Bar — intimate downtown wine-and-cocktail room (confirm kitchen hours) · Ann's Authentic Thai — Craig's surprise hit"},
+        {ic:"🚐",slot:"Overnight · Reserved",nm:"Yampa River State Park HQ Campground",t:"overnight",ll:[40.4898,-107.3108],when:"5 min west of dinner · RESERVE TODAY on cpwshop.com",
+         why:"The reliable answer — a site with your name on it, zero dark-road searching. Right on US-40 between Craig and Hayden, showers and flush toilets at the camper services building. ~30 min to Beard & Braid in the morning.",
+         addr:"6185 W US Hwy 40, Hayden, CO",
+         map:"https://www.google.com/maps/search/?api=1&query=Yampa+River+State+Park+Headquarters+Campground+6185+W+US+Highway+40+Hayden+CO",
+         alt:"~$43 all-in ($24 basic site + $10 res fee + $9 parks pass). Free options are thin tonight — CO rest areas officially ban overnighting, Steamboat enforces its in-town ban, and the Rabbit Ears campgrounds don't open till late June. The guaranteed site is worth it."}
+      ]},
+
+    { dow:"Saturday · Jun 13", route:"Hayden → Steamboat (breakfast w/ Marc) → Denver → Limon, CO", miles:"~295 mi", time:"~6h drive",
+      short:"Limon",
+      note:"30 easy minutes into Steamboat for breakfast with Marc, US-40 over Rabbit Ears & Berthoud passes to Denver, then I-70 east — a Denver night split by the drive.",
+      sum:{ sd:"Sat 6/13", dest:"Limon, CO", mi:"~295 mi", lo:"Pilot/Flying J, Limon (free)", ks:"Beard & Braid w/ Marc · Rabbit Ears + Berthoud passes · Death & Co + RiNo walk-in dinner" },
+      stops:[
+        {ic:"☕",slot:"Breakfast w/ Marc",nm:"Beard & Braid",t:"coffee",ll:[40.4869,-106.8355],when:"Opens 7 AM · 30 min from camp",
+         why:"Great coffee, a fresh pastry case, and a breakfast sandwich reviewers call “next-level” — a proper sit-down spot to catch up with Marc. Go light; today's a feast.",
+         addr:"116 9th St, Steamboat Springs",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Beard+%26+Braid+116+9th+St+Steamboat+Springs+CO",
+         alt:"Smell That Bread Bakery — laminated pastry, 135 11th St (★4.5) · Causeway Coffee House — best latte, 427 Oak St (★4.9)"},
+        {ic:"🛣️",slot:"Stop",nm:"Rabbit Ears Pass Overlook",t:"stop",ll:[40.3841,-106.6119],when:"~25 min past Steamboat",
+         why:"Last big look back down the Yampa Valley before you drop east — the climb out of Steamboat is the morning's scenery.",
+         map:"https://www.google.com/maps/search/?api=1&query=Rabbit+Ears+Pass+overlook+Colorado"},
+        {ic:"🛣️",slot:"Stop",nm:"Berthoud Pass Summit · 11,307 ft",t:"stop",ll:[39.7982,-105.7772],when:"~2h15m in",
+         why:"Classic Continental Divide pull-off on US-40 before the descent to the Front Range. Then it's downhill to Denver.",
+         map:"https://www.google.com/maps/search/?api=1&query=Berthoud+Pass+summit+Colorado"},
+        {ic:"🅿️",slot:"Parking",nm:"RiNo — Park Once, Walk the Night",t:"parking",ll:[39.7577,-104.9864],when:"Early-afternoon arrival",
+         why:"Paid surface lot around 25th & Larimer/Brighton (~$10–20, no van-height worry). Death & Co and every dinner option are walkable. Time to wander RiNo first.",
+         map:"https://www.google.com/maps/search/?api=1&query=RiNo+parking+25th+%26+Larimer+Denver+CO"},
+        {ic:"🍸",slot:"Drinks",nm:"Death & Co",t:"drinks",ll:[39.7573,-104.9864],when:"Opens 3 PM Sat · arrive near open",
+         why:"#36 on North America's 50 Best Bars — the NYC institution's only full expansion, in the Ramble Hotel's gorgeous lobby. Walk-ins welcome.",
+         addr:"1280 25th St, Denver",rate:"4.6",
+         map:"https://www.google.com/maps/search/?api=1&query=Death+%26+Co+1280+25th+St+Denver+CO"},
+        {ic:"🍽️",slot:"Dinner",nm:"RiNo Walk-In List",t:"dinner",ll:[39.7577,-104.9863],when:"After drinks · all a short walk away",
+         why:"Pick the room that calls you. Cart-Driver is the all-rounder: counter seating, raw bar, a killer salad and clam pizza.",
+         addr:"Cart-Driver — 2500 Larimer St",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=Cart-Driver+2500+Larimer+St+Denver+CO",
+         alt:"Work & Class — Latin/Southern, lively (★4.6) · Petit Chelou — 10-seat chef's counter, walk-ins 4 PM, in Hop Alley · Hop Alley — modern Chinese (★4.5) · Uchi — sushi bar (★4.6) · Safta — modern Israeli (★4.5)"},
+        {ic:"🚐",slot:"Overnight · Free",nm:"Pilot / Flying J, Limon",t:"overnight",ll:[39.2751,-103.7095],when:"~1h35m east of Denver",
+         why:"24-hr travel center with an IHOP on-site — sleep, eat, and roll. Well-lit, busy, standard overnight parking.",
+         addr:"2495 Williams Ave, Limon, CO",
+         map:"https://www.google.com/maps/search/?api=1&query=Flying+J+Travel+Center+2495+Williams+Ave+Limon+CO",
+         alt:"Stop early? Love's Travel Stop, Bennett — ~35 min east of Denver, 1191 S 1st St"}
+      ]},
+
+    { dow:"Sunday · Jun 14", route:"Limon → Salina (Cozy Inn) → Lawrence, KS", miles:"~390 mi", time:"~5h15m drive",
+      short:"Lawrence",
+      note:"I-70 east the whole way. A road-food landmark for lunch and a fun Mass Street night to finish.",
+      sum:{ sd:"Sun 6/14", dest:"Lawrence, KS", mi:"~390 mi", lo:"Lawrence Service Area (free)", ks:"Cozy Inn sliders (Salina) · Eisenhower Library (Abilene) · Meadowlark + John Brown's" },
+      stops:[
+        {ic:"☕",slot:"Breakfast",nm:"Ahimsa Coffee",t:"coffee",ll:[39.2701,-103.7126],when:"Opens 7 AM Sun",
+         why:"A genuinely good independent coffee shop hiding in Limon — espresso, pastries, even a Pikes Peak view. Coffee + pastry and roll.",
+         addr:"580 V Ave, Limon, CO",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=Ahimsa+Coffee+580+V+Ave+Limon+CO",
+         alt:"Country Pride at the TA — hearty trucker breakfast (★3.9) · or the IHOP at your overnight stop"},
+        {ic:"🛣️",slot:"Stop · Optional",nm:"Monument Rocks",t:"stop",ll:[38.7935,-100.7621],when:"~1h40m in · ~25 min south of I-70",
+         why:"The “Chalk Pyramids” — 70-ft Cretaceous spires rising out of the plains, a National Natural Landmark. ~1-hr round-trip; only if unhurried.",
+         map:"https://www.google.com/maps/search/?api=1&query=Monument+Rocks+Oakley+KS"},
+        {ic:"🍔",slot:"Lunch",nm:"The Cozy Inn",t:"lunch",ll:[38.841,-97.6101],when:"~3h40m in (Salina)",lm:true,
+         why:"Why you took this route. A six-stool 1922 slider stand that perfected one thing: tiny onion-steamed patties “in the bag,” dirt cheap (6 for ~$10). Order a sack with mustard.",
+         addr:"108 N 7th St, Salina, KS",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=The+Cozy+Inn+108+N+7th+St+Salina+KS"},
+        {ic:"🏛️",slot:"Stop",nm:"Eisenhower Presidential Library",t:"stop",ll:[38.9115,-97.2108],when:"~25 min past Salina · closes 4:30 PM",
+         why:"A beautifully done campus (museum, boyhood home, library, chapel) on Ike's WWII command and presidency. Worth 1–2 hrs — don't dawdle over the sliders.",
+         addr:"200 SE 4th St, Abilene, KS",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Eisenhower+Presidential+Library+200+SE+4th+St+Abilene+KS"},
+        {ic:"🅿️",slot:"Parking",nm:"Downtown Lawrence · Mass Street",t:"parking",ll:[38.9654,-95.2355],when:"Evening",
+         why:"Free on-street parking (loose on Sundays) plus the Riverfront & New Hampshire garages. Park once — dinner and drinks are a few blocks apart.",
+         map:"https://www.google.com/maps/search/?api=1&query=Massachusetts+St+downtown+Lawrence+KS+parking"},
+        {ic:"🍽️",slot:"Dinner",nm:"Meadowlark Wine Bar",t:"dinner",ll:[38.9652,-95.2363],when:"Open Sun 4–10 PM",
+         why:"Your kind of room — a cozy natural-wine bar with inventive small plates, explicitly great for solo dining at the bar. (Sable's chef's table is closed Sundays.)",
+         addr:"1011 Massachusetts St, Lawrence",rate:"4.9",
+         map:"https://www.google.com/maps/search/?api=1&query=Meadowlark+Wine+Bar+1011+Massachusetts+St+Lawrence+KS",
+         alt:"715 — farm-to-table bistro + cocktails (★4.5) · Ramen Bowls — casual ramen (★4.3)"},
+        {ic:"🍸",slot:"Drinks",nm:"John Brown's Underground",t:"drinks",ll:[38.9712,-95.2357],when:"Open Sun 5 PM–midnight",
+         why:"Lawrence's best cocktail spot — a sub-street stone-and-dark-wood lounge with a rotating menu of creative, well-balanced drinks. Hard to beat in the whole KC area.",
+         addr:"7 E 7th St, Lawrence, KS",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=John+Brown%27s+Underground+7+E+7th+St+Lawrence+KS",
+         alt:"Or stay at Meadowlark for the natural-wine list and a nightcap"},
+        {ic:"🚐",slot:"Overnight · Free",nm:"Lawrence Service Area",t:"overnight",ll:[39.0197,-95.1358],when:"~15 min east on the turnpike",
+         why:"Hop the turnpike toward KC and stop at this 24-hr service area (Love's + McDonald's, big lot) — vetted as a great overnight park, and it sets up a full KC day tomorrow.",
+         addr:"I-70 / Kansas Turnpike, Tonganoxie, KS",
+         map:"https://www.google.com/maps/search/?api=1&query=Lawrence+Service+Area+Kansas+Turnpike+Tonganoxie+KS",
+         alt:"Stay downtown & walk back — Riverfront garage (verify rules) · Backup: Walmart, 3300 Iowa St"}
+      ]},
+
+    { dow:"Monday · Jun 15", route:"Lawrence → Kansas City — the full-day stay", miles:"~80 mi", time:"~1h30m total",
+      short:"Kansas City",
+      note:"The day the new schedule buys you. KC gets a real visit instead of a drive-by: burnt ends at open, a world-class (free) museum, an amaro bar, and a hearth-fired dinner.",
+      sum:{ sd:"Mon 6/15", dest:"Kansas City — full day", mi:"~80 mi", lo:"Petro Oak Grove (free + showers)", ks:"Slap's at open · Nelson-Atkins (free, Mon-only) · Mitch e Amaro · Fox and Pearl fried-chicken night" },
+      stops:[
+        {ic:"☕",slot:"Coffee",nm:"Messenger Coffee Co.",t:"coffee",ll:[39.0935,-94.5816],when:"~40 min in · Crossroads",
+         why:"A gorgeous multi-level roaster-bakery with Ibis Bakery laminating in-house — proper croissants before the meat. Linger; today has no clock.",
+         addr:"1624 Grand Blvd, Kansas City, MO",rate:"4.6",
+         map:"https://www.google.com/maps/search/?api=1&query=Messenger+Coffee+Co+1624+Grand+Blvd+Kansas+City+MO"},
+        {ic:"🍖",slot:"Lunch",nm:"Slap's BBQ",t:"lunch",ll:[39.1025,-94.6244],when:"Opens 11 AM Mon · be there at open",lm:true,
+         why:"The current KC champ by local consensus and the highest-rated of the legends. Burnt ends and ribs are the move — they sell out, so 11 AM sharp is the play.",
+         addr:"553 Central Ave, Kansas City, KS",rate:"4.6",
+         map:"https://www.google.com/maps/search/?api=1&query=Slap%27s+BBQ+553+Central+Ave+Kansas+City+KS",
+         alt:"Arthur Bryant's — national bucket-list landmark (Bourdain's pick), 1727 Brooklyn Ave (★4.2) · Joe's KC — the gas-station original, Z-Man + burnt ends (★4.5)"},
+        {ic:"🏛️",slot:"Stop",nm:"Nelson-Atkins Museum of Art",t:"stop",ll:[39.045,-94.581],when:"Mon 10–5 · free · closed Tue/Wed — today's the day",
+         why:"One of America's great museums, free, with the shuttlecock lawn and the glowing Bloch Building. Caravaggio, a killer Asian collection, 2–3 easy hours to digest the burnt ends.",
+         addr:"4525 Oak St, Kansas City, MO",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Nelson-Atkins+Museum+of+Art+4525+Oak+St+Kansas+City+MO",
+         alt:"Van note: skip the garage — free open-air street parking around 45th & Oak / Theis Park, easy walk"},
+        {ic:"🍸",slot:"Aperitivo",nm:"Mitch e Amaro",t:"drinks",ll:[39.1421,-94.5771],when:"Mon 11 AM–9 PM · go ~4:30, it closes early",
+         why:"Your Amor y Amargo analog in North KC — a bottle-shop-bar with the best amaro, mezcal, and vermouth selection in the city and bartenders who love to steer. Amaro flight before dinner.",
+         addr:"306 Armour Rd, North Kansas City, MO",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Mitch+e+Amaro+306+Armour+Rd+North+Kansas+City+MO"},
+        {ic:"🅿️",slot:"Parking",nm:"Westside · Summit Street",t:"parking",ll:[39.0872,-94.5935],when:"Evening",
+         why:"Free open-air street parking on and around Summit St by the restaurant — quiet residential-historic block, no height worries, easy in and out.",
+         map:"https://www.google.com/maps/search/?api=1&query=Summit+St+%26+21st+St+Kansas+City+MO+parking"},
+        {ic:"🍽️",slot:"Dinner",nm:"Fox and Pearl",t:"dinner",ll:[39.0861,-94.5936],when:"Mon 5–10 PM · Monday = fried chicken + industry night",
+         why:"Chef Vaughn Good's live-fire Westside bistro — hearth cooking, house preservation, local farms, French technique on Midwestern comfort. Monday's fried-chicken special plus industry night means the room has energy when the rest of KC is dark.",
+         addr:"2143 Summit St, Kansas City, MO",rate:"4.6",
+         map:"https://www.google.com/maps/search/?api=1&query=Fox+and+Pearl+2143+Summit+St+Kansas+City+MO",
+         alt:"Extra Virgin — Michael Smith's Mediterranean small plates, Crossroads (★4.5) · The Russell — homey, no-res comfort spot on Main (★4.6)"},
+        {ic:"🚐",slot:"Overnight · Free",nm:"Petro Stopping Center, Oak Grove",t:"overnight",ll:[39.015,-94.131],when:"~30 min east on I-70 · exit 28",
+         why:"Big 24-hr travel center (293 spaces) with showers (~$17) — it's night 4, so rinse off here or at tomorrow's Troy stop. Sets up an easy St. Louis run.",
+         addr:"301 SW 1st St, Oak Grove, MO",
+         map:"https://www.google.com/maps/search/?api=1&query=Petro+Stopping+Center+301+SW+1st+St+Oak+Grove+MO",
+         alt:"TA Oak Grove — across the interchange, 100 N Broadway St · Holiday Inn Express Oak Grove if a real bed calls (~$110)"}
+      ]},
+
+    { dow:"Tuesday · Jun 16", route:"Oak Grove → Columbia → St. Louis, MO", miles:"~220 mi", time:"~3h45m drive",
+      short:"St. Louis",
+      note:"A short cruise across Missouri — and the Tuesday arrival unlocks the St. Louis spots that were dark on the old Monday plan.",
+      sum:{ sd:"Tue 6/16", dest:"St. Louis, MO", mi:"~220 mi", lo:"Pilot, Troy IL (free + showers)", ks:"Goldie's Bagels (Columbia) · Gateway Arch · Sado + Ted Drewes + Planter's House" },
+      stops:[
+        {ic:"🛣️",slot:"Stop",nm:"Les Bourgeois Bluffs · Rocheport",t:"stop",ll:[38.98,-92.5641],when:"~1h in · 5 min off I-70",
+         why:"An A-frame perch on the Missouri River bluffs above the Katy Trail — a genuinely pretty morning leg-stretch in a flat run. (Tasting room opens later; the view is the stop.)",
+         map:"https://www.google.com/maps/search/?api=1&query=Les+Bourgeois+Vineyards+Rocheport+MO"},
+        {ic:"☕",slot:"Breakfast",nm:"Goldie's Bagels",t:"coffee",ll:[38.95,-92.3275],when:"~1h20m in (Columbia) · Tue 7 AM–2 PM",
+         why:"Real NYC-style bagels in a college town — boiled, blistered, taken seriously. The tomato-jam breakfast sandwich is the order. Downtown, blocks off the highway line.",
+         addr:"114 S 9th St, Columbia, MO",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=Goldie%27s+Bagels+114+S+9th+St+Columbia+MO"},
+        {ic:"🅿️",slot:"Parking",nm:"St. Louis · Forest Park Base",t:"parking",ll:[38.6382,-90.2847],when:"~1:30 PM arrival",
+         why:"Post up at Forest Park — free parking, huge green space, world-class free museums (Art Museum open Tue) — a perfect van-day base near tonight's dinner.",
+         map:"https://www.google.com/maps/search/?api=1&query=Forest+Park+St+Louis+MO+parking"},
+        {ic:"🛣️",slot:"Stop",nm:"Gateway Arch",t:"stop",ll:[38.6246,-90.185],when:"Late afternoon / golden hour",
+         why:"Grounds are free to walk and the riverfront is a great stretch-and-stroll. Tram-to-the-top needs a timed ticket (last rides early evening) — you've got the time today.",
+         map:"https://www.google.com/maps/search/?api=1&query=Gateway+Arch+St+Louis+MO"},
+        {ic:"🍽️",slot:"Dinner",nm:"Sado",t:"dinner",ll:[38.6181,-90.2726],when:"Tue 5–9 PM · sit at the sushi counter",
+         why:"Nick Bognar's modern Japanese izakaya on the Hill — 2026 James Beard finalist (Best Chef: Midwest), and St. Louis critics' pick for best restaurant in the city. Closed Mondays — your new Tuesday unlocks it. Counter seats are the solo move.",
+         addr:"5201 Shaw Ave, St. Louis, MO",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=Sado+5201+Shaw+Ave+St+Louis+MO",
+         alt:"iNDO — Bognar's first spot, Botanical Heights, open Tue (★4.7) · Black Mountain Wine House — tiny wine-and-amaro bar, the old plan's gem (★4.9)"},
+        {ic:"🍦",slot:"Dessert",nm:"Ted Drewes Frozen Custard",t:"dessert",ll:[38.5894,-90.3076],when:"Open till 10:30 PM",lm:true,
+         why:"A St. Louis / Route 66 institution since 1930. Get a “concrete” — so thick they flip it upside down before handing it over.",
+         addr:"6726 Chippewa St, St. Louis, MO",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Ted+Drewes+6726+Chippewa+St+St+Louis+MO"},
+        {ic:"🍸",slot:"Drinks",nm:"Planter's House",t:"drinks",ll:[38.6207,-90.212],when:"Tue 4 PM–10 PM · Lafayette Square",
+         why:"Ted Kilgore's nationally known room — one of the great American cocktail bars, closed on the old Monday plan and open tonight. Deep classics knowledge, serious original list.",
+         addr:"1000 Mississippi Ave, St. Louis, MO",rate:"4.7",
+         map:"https://www.google.com/maps/search/?api=1&query=Planter%27s+House+1000+Mississippi+Ave+St+Louis+MO",
+         alt:"Small Change — the casual sister bar, neighborhood energy (★4.8)"},
+        {ic:"🚐",slot:"Overnight · Free",nm:"Pilot Travel Center, Troy IL",t:"overnight",ll:[38.7315,-89.9087],when:"~20 min NE, on tomorrow's I-55 line",
+         why:"24-hr center ~15 mi from the Arch, big RV/truck lot, and clean pay showers (~$15) — rinse off without paying for a room. Free.",
+         addr:"820 Edwardsville Rd, Troy, IL",
+         map:"https://www.google.com/maps/search/?api=1&query=Pilot+Travel+Center+820+Edwardsville+Rd+Troy+IL"},
+        {ic:"🏨",slot:"Hotel · Optional",nm:"Holiday Inn Express Troy",t:"hotel",ll:[38.7348,-89.9148],when:"If night 5 calls for a real reset",
+         why:"Right by the Pilot, indoor pool, free hot breakfast — a clean reset before arrival day. ~$100–120/night; cheaper nearby (Super 8 ~$72).",
+         addr:"Edwardsville Rd, Troy, IL",
+         map:"https://www.google.com/maps/search/?api=1&query=Holiday+Inn+Express+Troy+IL"}
+      ]},
+
+    { dow:"Wednesday · Jun 17", route:"Troy → Springfield (Route 66) → O'Hare → Logan Square", miles:"~285 mi", time:"~4h45m drive",
+      short:"Chicago",
+      note:"Arrival day up the Route 66 corridor. TARGET: park the van by ~4:45 PM to make a 6 PM Logan Square meetup.",
+      sum:{ sd:"Wed 6/17", dest:"Chicago (O'Hare → Logan Square)", mi:"~285 mi", lo:"— finish in the city", ks:"Cozy Dog (Springfield) · Lincoln Museum · van → Economy Lot G · Blue Line by 6 PM" },
+      stops:[
+        {ic:"☕",slot:"Rollout",nm:"Coffee & Go",t:"coffee",ll:[38.8114,-89.9532],when:"Leave Troy by ~8:30–9 AM",
+         why:"Grab coffee in Edwardsville or at the travel center and roll early so Springfield isn't rushed. Go light — the Route 66 lunch is the move.",
+         map:"https://www.google.com/maps/search/?api=1&query=coffee+Edwardsville+IL"},
+        {ic:"🌭",slot:"Lunch",nm:"Cozy Dog Drive In",t:"lunch",ll:[39.7624,-89.6488],when:"~1h20m in (Springfield) · open Wed 8–8",lm:true,
+         why:"The birthplace of the corn dog on a stick (since 1949, still family-owned), packed with Route 66 memorabilia. A perfect bookend to the Cozy INN earlier in the trip.",
+         addr:"2935 S 6th St, Springfield, IL",rate:"4.5",
+         map:"https://www.google.com/maps/search/?api=1&query=Cozy+Dog+Drive+In+2935+S+6th+St+Springfield+IL",
+         alt:"D'Arcy's Pint — the definitive Springfield “horseshoe,” 661 W Stanford Ave (★4.6, heavier/sit-down — weigh against the clock)"},
+        {ic:"🏛️",slot:"Stop",nm:"Lincoln Presidential Museum",t:"stop",ll:[39.8034,-89.6471],when:"Daily 9–5 · only if you leave by ~1 PM",
+         why:"A genuinely excellent, immersive museum downtown — your sightseeing wheelhouse. ~2 hrs. If the clock's tight, walk the free Lincoln Home instead, or save it.",
+         addr:"212 N 6th St, Springfield, IL",rate:"4.8",
+         map:"https://www.google.com/maps/search/?api=1&query=Abraham+Lincoln+Presidential+Library+212+N+6th+St+Springfield+IL",
+         alt:"Ahead of schedule? Route 66 kitsch — “Tall Paul” statue in Atlanta IL · murals in Pontiac IL"},
+        {ic:"🅿️",slot:"Van Drop · Surface Lot Only",nm:"O'Hare Economy Lot G",t:"parking",ll:[41.9784,-87.8857],when:"Park by ~4:45 PM",warn:true,
+         why:"⚠️ The garages (and even covered Lot F at 8'4\") are too low for the van — use an OPEN-AIR economy lot. Lot G is cheapest ($15/day), open-air, free ATS train to terminals. Follow “Economy Parking” off I-190.",
+         addr:"O'Hare Economy Parking Lot G",
+         map:"https://www.google.com/maps/search/?api=1&query=O%27Hare+Economy+Parking+Lot+G",
+         alt:"Economy Lot E — open-air, $17/day, its own ATS station"},
+        {ic:"🚇",slot:"Logistics",nm:"Lot → Blue Line → Logan Square",t:"logistics",ll:[41.9295,-87.7076],when:"~50–60 min total",
+         why:"Free ATS people-mover to the terminals → CTA Blue Line (24/7, $5) → ~25–30 min to the Logan Square stop (Kedzie/Milwaukee) or California. Park by ~4:45 to land by ~6.",
+         map:"https://www.google.com/maps/search/?api=1&query=CTA+Blue+Line+Logan+Square+station+Chicago"},
+        {ic:"🏁",slot:"Arrive",nm:"Logan Square · ~6 PM Wednesday",t:"logistics",ll:[41.9286,-87.7069],when:"Wednesday evening · Jun 17",
+         why:"Right on the new schedule. Trip complete — van tucked at O'Hare, you're in the city. Dinner & drinks: your call together.",
+         map:"https://www.google.com/maps/search/?api=1&query=Logan+Square+Chicago+IL"}
+      ]}
+  ],
+
+  summary: {
+    total: { headline: "~1,580 miles · 6 days",
+             sub: "Friday morning, Jun 12 → Wednesday evening, Jun 17" },
+    note: "Return planned via Route A — the scenic I-80 / Snowy Range line. No highway repeated. Drive it home whenever you're ready."
+  }
+};
+/* ════════════════════════════ END TRIP DATA ═══════════════════════════
+   Engine below — generic across trips. Canonical copy: ../template/index.html.
+   Edit the engine there first, then roll forward into trips.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>`;
+
+// flat stop list across all days — used for prev-stop leg links
+const ALL = []; TRIP.days.forEach(d=>d.stops.forEach(s=>ALL.push(s)));
+let gi = 0;
+function locStr(s){ return s.ll ? s.ll[0]+','+s.ll[1] : encodeURIComponent(s.addr||s.nm); }
+
+document.title = TRIP.meta.docTitle || TRIP.meta.title;
+if (TRIP.meta.theme) for (const [k,v] of Object.entries(TRIP.meta.theme)) document.documentElement.style.setProperty(k,v);
+document.getElementById('mk').textContent = TRIP.meta.kicker;
+document.getElementById('ttl').textContent = TRIP.meta.title;
+
+const deck = document.getElementById('deck');
+const tabs = document.getElementById('tabs');
+const KEY = TRIP.meta.storageKey || (TRIP.meta.id + '_done');
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY)||'{}'); } catch(e){ store={}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+
+// ---- build cover ----
+const C = TRIP.cover;
+const cover = document.createElement('section');
+cover.className='panel show';
+cover.innerHTML = `
+  <div class="cover">
+    <div class="sun"></div><div class="ridge"></div>
+    <div>
+      <div class="kick">${C.kick}</div>
+      <h1>${C.titleTop}<br>${C.titleBottom}</h1>
+    </div>
+    <div>
+      <div class="routeline">${C.routeline}</div>
+      <div class="covermeta">${C.stats.map(s=>`<div><div class="n">${s.n}</div><div class="l">${s.l}</div></div>`).join('')}</div>
+      <div class="swipehint"><span class="arr">▶▶</span> ${C.hint||'Swipe to begin · or tap a day above'}</div>
+    </div>
+  </div>`;
+deck.appendChild(cover);
+
+// ---- build day panels ----
+TRIP.days.forEach((day, di)=>{
+  const p = document.createElement('section');
+  p.className='panel';
+  let cards = day.stops.map((s, si)=>{
+    const id = 'd'+(di+1)+'s'+(si+1);
+    const done = store[id] ? ' done':'';
+    const extras = (s.rate?` · ★ ${s.rate}`:'') + (s.lm?' · ◆ landmark':'');
+    const addr = s.addr ? `<div class="addr">${PIN}${s.addr}</div>`:'';
+    const alt = s.alt ? `<div class="alt"><b>Also</b><br>${s.alt}</div>`:'';
+    const map = s.map ? `<a class="maplink${s.warn?' warn':''}" href="${s.map}" target="_blank" rel="noopener">${PIN} Open in Maps</a>`:'';
+    const prev = ALL[gi-1]; gi++;
+    const leg = prev ? `<a class="maplink leg" href="https://www.google.com/maps/dir/?api=1&origin=${locStr(prev)}&destination=${locStr(s)}" target="_blank" rel="noopener">↪ Leg from ${prev.nm}</a>`:'';
+    return `<div class="stop">
+      <div class="marker">${s.ic}</div>
+      <div class="card${done}" data-id="${id}">
+        <div class="top">
+          <div>
+            <div class="slot">${s.slot}</div>
+            <h3 class="nm">${s.nm}</h3>
+          </div>
+          <button class="stamp" data-stamp="${id}" aria-label="Mark visited">✓</button>
+        </div>
+        <div class="when">${s.when}${extras}</div>
+        <p class="why">${s.why}</p>
+        ${addr}${map}${leg}${alt}
+      </div>
+    </div>`;
+  }).join('');
+
+  p.innerHTML = `
+    <div class="dayhead">
+      <div class="dno">Day ${di+1} · ${day.dow}</div>
+      <h2>${day.route}</h2>
+      <div class="daymeta"><span class="chip km">▸ ${day.miles}</span><span class="chip">◷ ${day.time}</span></div>
+    </div>
+    <div class="note">${day.note}</div>
+    ${day.stops.some(s=>s.ll)?`<div class="daymap" id="map-d${di}"></div>`:''}
+    <div class="timeline">${cards}</div>`;
+  deck.appendChild(p);
+});
+
+// ---- day route maps (Leaflet + OSM; degrades to nothing offline) ----
+const dayMaps = {};
+function geomKey(di, pts){
+  return TRIP.meta.id+'_geom_d'+(di+1)+'_'+pts.map(s=>s.ll.map(n=>n.toFixed(3)).join(',')).join(';');
+}
+async function routeGeom(di, pts){
+  const key = geomKey(di, pts);
+  try{ const c = localStorage.getItem(key); if(c) return JSON.parse(c); }catch(e){}
+  const coords = pts.map(s=>s.ll[1]+','+s.ll[0]).join(';');
+  const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=simplified&geometries=geojson`);
+  if(!r.ok) return null;
+  const j = await r.json();
+  if(!j.routes || !j.routes[0]) return null;
+  const geo = j.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+  try{ localStorage.setItem(key, JSON.stringify(geo)); }catch(e){}
+  return geo;
+}
+function initDayMap(panelIdx){
+  const di = panelIdx-1;                                  // panel 0 is the cover
+  if(di<0 || di>=TRIP.days.length || dayMaps[di] || !window.L) return;
+  const el = document.getElementById('map-d'+di);
+  if(!el) return;
+  const pts = TRIP.days[di].stops.filter(s=>s.ll);
+  if(!pts.length) return;
+  const m = L.map(el,{scrollWheelZoom:false});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  pts.forEach((s,i)=>{
+    L.marker(s.ll,{icon:L.divIcon({className:'', html:`<div class="mapnum${i===0?' first':''}">${i+1}</div>`,
+      iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-14]})})
+      .addTo(m)
+      .bindPopup(`<b>${s.nm}</b>${s.map?`<br><a href="${s.map}" target="_blank" rel="noopener">Open in Maps ▸</a>`:''}`);
+  });
+  const dashed = L.polyline(pts.map(s=>s.ll),{color:'#1f4a3a',weight:3,opacity:.7,dashArray:'6 8'}).addTo(m);
+  m.fitBounds(L.latLngBounds(pts.map(s=>s.ll)).pad(0.18));
+  dayMaps[di] = m;
+  setTimeout(()=>m.invalidateSize(), 60);
+  routeGeom(di, pts).then(geo=>{
+    if(geo){ m.removeLayer(dashed); L.polyline(geo,{color:'#1f4a3a',weight:4,opacity:.85}).addTo(m); }
+  }).catch(()=>{});
+}
+window.addEventListener('load', ()=>initDayMap(cur));
+
+// ---- build summary ----
+const S = TRIP.summary;
+const sum = document.createElement('section');
+sum.className='panel';
+sum.innerHTML = `
+  <div class="sumwrap">
+    <div class="kick">◆ The whole route</div>
+    <h2>Trip Summary</h2>
+    ${TRIP.days.map((day,i)=>{const r=day.sum; return `
+      <div class="srow">
+        <div class="h"><div><div class="d">Day ${i+1} · ${r.sd}</div><div class="dest">${r.dest}</div></div><div class="mi">${r.mi}</div></div>
+        <div class="lo">🛏 ${r.lo}</div>
+        <div class="ks">${r.ks}</div>
+      </div>`;}).join('')}
+    <div class="total"><b>${S.total.headline}</b>${S.total.sub}</div>
+    ${S.note?`<div class="ret">${S.note}</div>`:''}
+  </div>`;
+deck.appendChild(sum);
+
+// ---- tabs ----
+const LABELS = ['Start', ...TRIP.days.map((d,i)=>d.tab||String(i+1)), 'End'];
+const panels = [...deck.querySelectorAll('.panel')];
+LABELS.forEach((l,i)=>{
+  const b=document.createElement('button');
+  b.className='tab'+(i===0?' active':'');b.textContent=l;
+  b.onclick=()=>goTo(i);
+  tabs.appendChild(b);
+});
+
+// ---- navigation ----
+const prog=document.getElementById('prog'), ctr=document.getElementById('ctr'),
+      where=document.getElementById('where'), prev=document.getElementById('prev'), next=document.getElementById('next');
+let cur=0;
+const WHERE=['Cover', ...TRIP.days.map((d,i)=>`Day ${i+1} · ${d.short}`), 'Summary'];
+function goTo(i){ i=Math.max(0,Math.min(panels.length-1,i)); deck.scrollTo({left:i*deck.clientWidth,behavior:'smooth'}); }
+prev.onclick=()=>goTo(cur-1); next.onclick=()=>goTo(cur+1);
+
+function update(){
+  const i=Math.round(deck.scrollLeft/deck.clientWidth);
+  if(i!==cur){ cur=i;
+    [...tabs.children].forEach((t,x)=>t.classList.toggle('active',x===i));
+    panels.forEach((p,x)=>{ if(x===i) p.classList.add('show'); });
+  }
+  initDayMap(cur);
+  // stagger cards in active panel
+  const stops=panels[cur].querySelectorAll('.stop');
+  stops.forEach((s,x)=>s.style.transitionDelay=(0.05*x)+'s');
+  prog.style.width=((cur)/(panels.length-1)*100)+'%';
+  ctr.textContent=String(cur).padStart(2,'0')+' / '+String(panels.length-1).padStart(2,'0');
+  where.textContent=WHERE[cur];
+  prev.disabled=cur===0; next.disabled=cur===panels.length-1;
+  next.textContent = cur===panels.length-1 ? 'Done ✓' : 'Next ▶';
+}
+let raf, rafFb; deck.addEventListener('scroll',()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(update); clearTimeout(rafFb); rafFb=setTimeout(update,120); });
+window.addEventListener('resize',()=>goTo(cur));
+
+// ---- visited stamps ----
+deck.addEventListener('click',e=>{
+  const b=e.target.closest('[data-stamp]'); if(!b) return;
+  const id=b.getAttribute('data-stamp');
+  const card=deck.querySelector('.card[data-id="'+id+'"]');
+  const on=card.classList.toggle('done');
+  store[id]=on?1:0; if(!on) delete store[id]; save();
+});
+
+update();
+</script>
+</body>
+</html>

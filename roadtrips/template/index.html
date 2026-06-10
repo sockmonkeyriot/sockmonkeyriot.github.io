@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#163528">
+<title>Road Tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --paper:#f1e7d5;
+    --card:#faf4e8;
+    --ink:#2a2017;
+    --ink-soft:#7a6a55;
+    --pine:#1f4a3a;
+    --pine-deep:#15342a;
+    --amber:#d9802f;
+    --clay:#b1442a;
+    --plum:#6a4a6e;
+    --steel:#3b5a6b;
+    --line:rgba(42,32,23,.16);
+    --line-strong:rgba(42,32,23,.3);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #244b3f 0%, #16332a 55%, #0f261f 100%);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* phone frame on desktop, full-bleed on mobile */
+  #app{
+    position:relative;
+    width:min(100vw,480px);
+    height:100dvh;
+    max-height:100dvh;
+    background:var(--paper);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+  }
+  @media(min-width:520px){
+    #app{height:min(100dvh,920px);border-radius:26px;border:1px solid rgba(0,0,0,.25);}
+  }
+  /* paper grain */
+  #app::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:50;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;opacity:.6;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    position:relative;z-index:30;
+    background:var(--pine-deep);color:#f1e7d5;
+    padding:10px 16px 9px;
+    flex:0 0 auto;
+    border-bottom:2px solid rgba(0,0,0,.25);
+  }
+  .progress{position:absolute;top:0;left:0;height:3px;background:var(--amber);width:0;transition:width .35s ease;z-index:40;}
+  .brand{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .brand .mk{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);}
+  .brand .ct{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:rgba(241,231,213,.7);}
+  .title{font-family:var(--serif);font-weight:600;font-size:17px;line-height:1.05;margin:1px 0 8px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tabs{display:flex;gap:6px;}
+  .tab{
+    flex:1;cursor:pointer;border:none;
+    font-family:var(--mono);font-size:11px;font-weight:500;
+    padding:5px 0;border-radius:7px;
+    background:rgba(241,231,213,.1);color:rgba(241,231,213,.6);
+    transition:.2s;letter-spacing:.04em;
+  }
+  .tab.active{background:var(--amber);color:#2a2017;}
+
+  /* ---------- deck ---------- */
+  .deck{
+    flex:1 1 auto;display:flex;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+  }
+  .deck::-webkit-scrollbar{display:none;}
+  .panel{
+    flex:0 0 100%;height:100%;overflow-y:auto;scroll-snap-align:start;
+    -webkit-overflow-scrolling:touch;
+    padding:0 0 96px;
+  }
+  .panel::-webkit-scrollbar{display:none;}
+
+  /* ---------- cover ---------- */
+  .cover{
+    min-height:100%;display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(170deg,#1f4a3a 0%,#15342a 60%,#0f261f 100%);
+    color:#f1e7d5;padding:30px 26px 40px;position:relative;overflow:hidden;
+  }
+  .sun{position:absolute;top:54px;right:-40px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,#e89a45 0%,#d9802f 55%,transparent 72%);opacity:.9;filter:blur(.3px);}
+  .ridge{position:absolute;left:0;right:0;bottom:120px;height:120px;
+    background:
+      linear-gradient(135deg,transparent 49.6%,#0f261f 50%) -20px 0/120px 120px repeat-x,
+      linear-gradient(-135deg,transparent 49.6%,#0f261f 50%) 40px 0/160px 120px repeat-x;
+    opacity:.5;}
+  .cover .kick{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);position:relative;}
+  .cover h1{font-family:var(--serif);font-weight:900;font-size:44px;line-height:.92;margin:10px 0 0;position:relative;letter-spacing:-.01em;}
+  .covermeta{position:relative;display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:auto;padding-top:30px;}
+  .covermeta .n{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1;}
+  .covermeta .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(241,231,213,.65);margin-top:4px;}
+  .routeline{position:relative;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:#cdbb9e;margin-top:22px;border-top:1px dashed rgba(241,231,213,.3);padding-top:16px;}
+  .swipehint{position:relative;margin-top:20px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--amber);display:flex;align-items:center;gap:8px;}
+  .swipehint .arr{animation:nudge 1.4s ease-in-out infinite;}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+
+  /* ---------- day header ---------- */
+  .dayhead{padding:22px 22px 14px;background:var(--paper);position:relative;}
+  .dayhead .dno{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--clay);text-transform:uppercase;}
+  .dayhead h2{font-family:var(--serif);font-weight:600;font-size:25px;line-height:1.05;margin:5px 0 2px;}
+  .dayhead .rt{font-family:var(--sans);font-size:13px;color:var(--ink-soft);font-weight:500;line-height:1.35;}
+  .daymeta{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
+  .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 9px;border-radius:6px;background:#e8dcc4;color:#5d4f3c;display:inline-flex;align-items:center;gap:5px;}
+  .chip.km{background:var(--pine);color:#f1e7d5;}
+  .note{margin:13px 22px 4px;font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);line-height:1.4;border-left:2px solid var(--amber);padding-left:11px;}
+
+  /* ---------- day route map ---------- */
+  .daymap{margin:13px 22px 4px;height:210px;border:1px solid var(--line);border-radius:13px;
+    box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);
+    overflow:hidden;position:relative;z-index:1;background:#e8e0cf;}
+  .mapnum{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--ink);
+    color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:500;
+    display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--line-strong);}
+  .mapnum.first{background:var(--amber);}
+  .daymap .leaflet-popup-content{font-family:var(--sans);font-size:12.5px;margin:10px 14px;}
+  .daymap .leaflet-popup-content b{font-family:var(--serif);font-size:14px;}
+  .daymap .leaflet-popup-content a{color:var(--pine);font-family:var(--mono);font-size:11px;}
+  .daymap .leaflet-popup-content-wrapper{background:var(--card);color:var(--ink);border-radius:10px;border:1px solid var(--line);}
+  .daymap .leaflet-popup-tip{background:var(--card);}
+
+  /* ---------- timeline / cards ---------- */
+  .timeline{padding:8px 18px 0;position:relative;}
+  .stop{position:relative;padding-left:46px;padding-bottom:18px;
+    opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease;}
+  .panel.show .stop{opacity:1;transform:none;}
+  .stop::before{ /* route line */
+    content:"";position:absolute;left:17px;top:30px;bottom:-4px;width:2px;
+    background:repeating-linear-gradient(var(--line-strong) 0 5px,transparent 5px 11px);
+  }
+  .stop:last-child::before{display:none;}
+  .marker{position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;
+    background:var(--card);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-size:16px;box-shadow:2px 2px 0 var(--line-strong);z-index:2;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:13px 14px 14px;box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);position:relative;}
+  .card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .slot{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);}
+  .nm{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.12;margin:3px 0 0;letter-spacing:.005em;}
+  .when{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--clay);margin:8px 0 5px;}
+  .why{font-size:13.5px;line-height:1.48;color:#3c3024;margin:0;}
+  .addr{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:10px;font-family:var(--mono);}
+  .addr svg{width:13px;height:13px;flex:0 0 auto;}
+  .alt{font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);}
+  .alt b{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--clay);}
+  .maplink{display:inline-flex;align-items:center;gap:6px;margin-top:11px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;
+    background:var(--pine);color:#f1e7d5;padding:8px 12px;border-radius:8px;transition:.18s;}
+  .maplink:hover{background:var(--pine-deep);transform:translateY(-1px);}
+  .maplink svg{width:13px;height:13px;}
+  .maplink.leg{background:transparent;color:var(--pine);border:1.5px solid var(--pine);padding:6.5px 10.5px;margin-left:8px;}
+  .warn{background:#fbeede;border:1px solid #e7b98c;color:#9a4a1c;}
+  .stamp{flex:0 0 auto;cursor:pointer;border:1.5px dashed var(--line-strong);background:transparent;
+    width:30px;height:30px;border-radius:50%;color:var(--line-strong);font-size:13px;
+    display:flex;align-items:center;justify-content:center;transition:.18s;}
+  .card.done{background:#eef0e4;}
+  .card.done .nm{text-decoration:line-through;text-decoration-color:var(--ink-soft);color:var(--ink-soft);}
+  .card.done .stamp{border-style:solid;border-color:var(--pine);background:var(--pine);color:#f1e7d5;transform:rotate(-8deg);}
+
+  /* ---------- summary ---------- */
+  .sumwrap{padding:24px 20px;}
+  .sumwrap h2{font-family:var(--serif);font-weight:900;font-size:30px;margin:6px 0 4px;}
+  .sumwrap .kick{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--clay);}
+  .srow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:12px;
+    box-shadow:0 8px 20px -16px rgba(42,32,23,.5);}
+  .srow .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .srow .d{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay);}
+  .srow .dest{font-family:var(--serif);font-weight:600;font-size:18px;margin:2px 0 0;}
+  .srow .mi{font-family:var(--mono);font-size:11px;color:var(--pine);white-space:nowrap;}
+  .srow .lo{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .srow .ks{font-size:12.5px;color:#3c3024;margin-top:6px;line-height:1.4;}
+  .total{margin-top:18px;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink);background:#e8dcc4;border-radius:10px;padding:13px;}
+  .total b{font-family:var(--serif);font-size:20px;display:block;margin-bottom:3px;letter-spacing:0;}
+  .ret{margin-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);text-align:center;line-height:1.45;padding:0 6px;}
+
+  /* ---------- bottom nav ---------- */
+  .nav{position:absolute;left:0;right:0;bottom:0;z-index:35;display:flex;align-items:center;gap:10px;
+    padding:11px 16px calc(11px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg,var(--paper) 70%,transparent);}
+  .nav button{font-family:var(--mono);font-size:12px;letter-spacing:.05em;cursor:pointer;
+    border:1.5px solid var(--ink);background:var(--card);color:var(--ink);
+    padding:10px 14px;border-radius:10px;transition:.15s;display:flex;align-items:center;gap:6px;}
+  .nav button:active{transform:translateY(1px);}
+  .nav button[disabled]{opacity:.32;pointer-events:none;}
+  .nav .where{flex:1;text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-soft);}
+  .nav .prim{background:var(--amber);border-color:var(--ink);font-weight:500;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="progress" id="prog"></div>
+    <div class="brand">
+      <span class="mk" id="mk"></span>
+      <span class="ct" id="ctr">00 / 00</span>
+    </div>
+    <div class="title" id="ttl"></div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <div class="deck" id="deck"></div>
+
+  <div class="nav">
+    <button id="prev" aria-label="Previous">◀ Prev</button>
+    <span class="where" id="where">Cover</span>
+    <button id="next" class="prim" aria-label="Next">Next ▶</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   TRIP DATA — everything specific to this trip lives in this object.
+   To make a new trip: copy this file, replace TRIP, done.
+   Schema reference: ../TEMPLATE.md
+   ════════════════════════════════════════════════════════════════════ */
+const TRIP = {
+  meta: {
+    id: "demo-trip",                       // localStorage key prefix ("<id>_done")
+    // storageKey: "legacy_key",           // optional: override storage key
+    docTitle: "Demo Trip · Road Tour",     // browser tab title
+    kicker: "◆ Demo · Two Days",           // header top-left, mono small caps
+    title: "Origin → Destination",         // header title line
+    // theme: { "--amber": "#c46a4d" },    // optional: per-trip CSS-var overrides
+  },
+
+  cover: {
+    kick: "A van road trip · Month 0–0, 20XX",
+    titleTop: "Origin",
+    titleBottom: "→ Destination",
+    routeline: "Origin → Waypoint → Big Stop → Waypoint → Destination",
+    stats: [
+      { n: "~000", l: "Total miles" },
+      { n: "2",    l: "Driving days" },
+      { n: "Fri–Sat", l: "Morning → evening" }
+    ],
+    hint: "Swipe to begin · or tap a day above"
+  },
+
+  days: [
+    { dow: "Friday · Mth 00", route: "Origin → Waypoint Town → Overnight Spot",
+      miles: "~000 mi", time: "~0h drive",
+      short: "Waypoint",
+      note: "The day's shape in one italic line — pacing, the timing logic, what to not miss.",
+      sum: { sd: "Fri 0/00", dest: "Overnight Spot, ST", mi: "~000 mi",
+             lo: "Example dispersed site (free)",
+             ks: "Lunch landmark · The big roadside stop · Dinner room" },
+      stops: [
+        { ic: "☕", slot: "Rollout", nm: "Coffee at Home Base", t: "coffee", ll: [40.7608,-111.8911],
+          when: "Leave by ~9 AM",
+          why: "Two sentences on why this stop earns its place — concrete, second person, no filler.",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🛣️", slot: "Stop", nm: "Scenic Overlook Example", t: "stop", ll: [40.6588,-111.4196],
+          when: "~1h20m in",
+          why: "A quick leg-stretch stop. The `when` line above carries the drive math.",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🍔", slot: "Lunch", nm: "Road-Food Landmark", t: "lunch", lm: true, ll: [40.507,-111.4133],
+          when: "~3h in · opens 11 AM · sells out — the catch goes here",
+          why: "A landmark card: `lm: true` appends ◆ landmark to the timing line; `rate` adds the ★ stars.",
+          addr: "108 Example St, Town, ST", rate: "4.7",
+          map: "https://www.google.com/maps/search/?api=1&query=example",
+          alt: "Alternate One — why it's different (★4.5) · Alternate Two — a second genuine option" },
+        { ic: "🅿️", slot: "Parking", nm: "Park Once, Walk the Night", t: "parking", ll: [40.5081,-111.4127],
+          when: "~5:30 PM arrival",
+          why: "Parking is a stop. Call out van-height limits, free zones, surface lots.",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🍽️", slot: "Dinner", nm: "The Serious Room", t: "dinner", ll: [40.5074,-111.414],
+          when: "Fri 5–10 PM · walk-ins at the bar",
+          why: "The day's anchor meal — what the room is, what to order, why eat at the bar.",
+          addr: "127 Example St, Town, ST", rate: "4.8",
+          map: "https://www.google.com/maps/search/?api=1&query=example",
+          alt: "Backup Room — one line on its angle (★4.6)" },
+        { ic: "🚐", slot: "Overnight · Free", nm: "Where the Van Sleeps", t: "overnight", ll: [40.3027,-111.2553],
+          when: "~25 min after dinner",
+          why: "Every day ends with a vetted, legal, free overnight. Elevation/temperature notes here.",
+          addr: "Example Forest Rd, Town, ST",
+          map: "https://www.google.com/maps/search/?api=1&query=example",
+          alt: "Heads-up: bans or gotchas go here · Backup: second vetted option" }
+      ]},
+
+    { dow: "Saturday · Mth 00", route: "Overnight Spot → Destination",
+      miles: "~000 mi", time: "~0h drive",
+      short: "Destination",
+      note: "Arrival day. TARGET: a hard timing anchor goes in caps like this.",
+      sum: { sd: "Sat 0/00", dest: "Destination, ST", mi: "~000 mi",
+             lo: "— finish in the city",
+             ks: "Breakfast spot · Warn-card parking · Arrival logistics" },
+      stops: [
+        { ic: "☕", slot: "Breakfast", nm: "Morning Coffee Spot", t: "coffee", ll: [40.1633,-110.4026],
+          when: "Opens 7 AM",
+          why: "A normal coffee card with an address and rating.",
+          addr: "116 Example St, Town, ST", rate: "4.8",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🍦", slot: "Dessert", nm: "Frozen Custard Institution", t: "dessert", ll: [40.2994,-109.9888],
+          when: "Open till 10:30 PM",
+          why: "A dessert stop — the emoji marker carries the category.",
+          addr: "6726 Example St, Town, ST", rate: "4.8",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🍸", slot: "Drinks", nm: "The Cocktail Room", t: "drinks", ll: [40.4555,-109.5287],
+          when: "Open 4 PM–10 PM",
+          why: "Drinks card — Level/quality context goes in this line.",
+          addr: "1000 Example Ave, Town, ST", rate: "4.7",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🅿️", slot: "Van Drop · Surface Lot Only", nm: "Warning-Style Parking Card", t: "parking", ll: [40.453,-109.524], warn: true,
+          when: "Park by ~4:45 PM",
+          why: "⚠️ `warn: true` styles the map button as a warning — for height limits, bans, and gotchas.",
+          addr: "Example Economy Lot",
+          map: "https://www.google.com/maps/search/?api=1&query=example",
+          alt: "Fallback lot — one line" },
+        { ic: "🚇", slot: "Logistics", nm: "Lot → Train → Neighborhood", t: "logistics", ll: [40.4541,-109.532],
+          when: "~50–60 min total",
+          why: "Logistics card for transit hand-offs and timing chains.",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🏨", slot: "Hotel · Optional", nm: "The Reset Option", t: "hotel", ll: [40.4525,-109.539],
+          when: "If the night calls for a real bed",
+          why: "Optional hotel card — price range and the why.",
+          addr: "Example Rd, Town, ST",
+          map: "https://www.google.com/maps/search/?api=1&query=example" },
+        { ic: "🏁", slot: "Arrive", nm: "Destination · ~6 PM", t: "logistics", ll: [40.456,-109.528],
+          when: "Saturday evening",
+          why: "The finish-line card. Trip complete.",
+          map: "https://www.google.com/maps/search/?api=1&query=example" }
+      ]}
+  ],
+
+  summary: {
+    total: { headline: "~000 miles · 2 days",
+             sub: "Friday morning → Saturday evening" },
+    note: "Optional italic closing note — the return plan, what's next, a sign-off."
+  }
+};
+/* ════════════════════════════ END TRIP DATA ═══════════════════════════
+   Engine below — generic across trips. Canonical copy: template/index.html.
+   Edit the engine there first, then roll forward into trips.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>`;
+
+// flat stop list across all days — used for prev-stop leg links
+const ALL = []; TRIP.days.forEach(d=>d.stops.forEach(s=>ALL.push(s)));
+let gi = 0;
+function locStr(s){ return s.ll ? s.ll[0]+','+s.ll[1] : encodeURIComponent(s.addr||s.nm); }
+
+document.title = TRIP.meta.docTitle || TRIP.meta.title;
+if (TRIP.meta.theme) for (const [k,v] of Object.entries(TRIP.meta.theme)) document.documentElement.style.setProperty(k,v);
+document.getElementById('mk').textContent = TRIP.meta.kicker;
+document.getElementById('ttl').textContent = TRIP.meta.title;
+
+const deck = document.getElementById('deck');
+const tabs = document.getElementById('tabs');
+const KEY = TRIP.meta.storageKey || (TRIP.meta.id + '_done');
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY)||'{}'); } catch(e){ store={}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+
+// ---- build cover ----
+const C = TRIP.cover;
+const cover = document.createElement('section');
+cover.className='panel show';
+cover.innerHTML = `
+  <div class="cover">
+    <div class="sun"></div><div class="ridge"></div>
+    <div>
+      <div class="kick">${C.kick}</div>
+      <h1>${C.titleTop}<br>${C.titleBottom}</h1>
+    </div>
+    <div>
+      <div class="routeline">${C.routeline}</div>
+      <div class="covermeta">${C.stats.map(s=>`<div><div class="n">${s.n}</div><div class="l">${s.l}</div></div>`).join('')}</div>
+      <div class="swipehint"><span class="arr">▶▶</span> ${C.hint||'Swipe to begin · or tap a day above'}</div>
+    </div>
+  </div>`;
+deck.appendChild(cover);
+
+// ---- build day panels ----
+TRIP.days.forEach((day, di)=>{
+  const p = document.createElement('section');
+  p.className='panel';
+  let cards = day.stops.map((s, si)=>{
+    const id = 'd'+(di+1)+'s'+(si+1);
+    const done = store[id] ? ' done':'';
+    const extras = (s.rate?` · ★ ${s.rate}`:'') + (s.lm?' · ◆ landmark':'');
+    const addr = s.addr ? `<div class="addr">${PIN}${s.addr}</div>`:'';
+    const alt = s.alt ? `<div class="alt"><b>Also</b><br>${s.alt}</div>`:'';
+    const map = s.map ? `<a class="maplink${s.warn?' warn':''}" href="${s.map}" target="_blank" rel="noopener">${PIN} Open in Maps</a>`:'';
+    const prev = ALL[gi-1]; gi++;
+    const leg = prev ? `<a class="maplink leg" href="https://www.google.com/maps/dir/?api=1&origin=${locStr(prev)}&destination=${locStr(s)}" target="_blank" rel="noopener">↪ Leg from ${prev.nm}</a>`:'';
+    return `<div class="stop">
+      <div class="marker">${s.ic}</div>
+      <div class="card${done}" data-id="${id}">
+        <div class="top">
+          <div>
+            <div class="slot">${s.slot}</div>
+            <h3 class="nm">${s.nm}</h3>
+          </div>
+          <button class="stamp" data-stamp="${id}" aria-label="Mark visited">✓</button>
+        </div>
+        <div class="when">${s.when}${extras}</div>
+        <p class="why">${s.why}</p>
+        ${addr}${map}${leg}${alt}
+      </div>
+    </div>`;
+  }).join('');
+
+  p.innerHTML = `
+    <div class="dayhead">
+      <div class="dno">Day ${di+1} · ${day.dow}</div>
+      <h2>${day.route}</h2>
+      <div class="daymeta"><span class="chip km">▸ ${day.miles}</span><span class="chip">◷ ${day.time}</span></div>
+    </div>
+    <div class="note">${day.note}</div>
+    ${day.stops.some(s=>s.ll)?`<div class="daymap" id="map-d${di}"></div>`:''}
+    <div class="timeline">${cards}</div>`;
+  deck.appendChild(p);
+});
+
+// ---- day route maps (Leaflet + OSM; degrades to nothing offline) ----
+const dayMaps = {};
+function geomKey(di, pts){
+  return TRIP.meta.id+'_geom_d'+(di+1)+'_'+pts.map(s=>s.ll.map(n=>n.toFixed(3)).join(',')).join(';');
+}
+async function routeGeom(di, pts){
+  const key = geomKey(di, pts);
+  try{ const c = localStorage.getItem(key); if(c) return JSON.parse(c); }catch(e){}
+  const coords = pts.map(s=>s.ll[1]+','+s.ll[0]).join(';');
+  const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=simplified&geometries=geojson`);
+  if(!r.ok) return null;
+  const j = await r.json();
+  if(!j.routes || !j.routes[0]) return null;
+  const geo = j.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+  try{ localStorage.setItem(key, JSON.stringify(geo)); }catch(e){}
+  return geo;
+}
+function initDayMap(panelIdx){
+  const di = panelIdx-1;                                  // panel 0 is the cover
+  if(di<0 || di>=TRIP.days.length || dayMaps[di] || !window.L) return;
+  const el = document.getElementById('map-d'+di);
+  if(!el) return;
+  const pts = TRIP.days[di].stops.filter(s=>s.ll);
+  if(!pts.length) return;
+  const m = L.map(el,{scrollWheelZoom:false});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  pts.forEach((s,i)=>{
+    L.marker(s.ll,{icon:L.divIcon({className:'', html:`<div class="mapnum${i===0?' first':''}">${i+1}</div>`,
+      iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-14]})})
+      .addTo(m)
+      .bindPopup(`<b>${s.nm}</b>${s.map?`<br><a href="${s.map}" target="_blank" rel="noopener">Open in Maps ▸</a>`:''}`);
+  });
+  const dashed = L.polyline(pts.map(s=>s.ll),{color:'#1f4a3a',weight:3,opacity:.7,dashArray:'6 8'}).addTo(m);
+  m.fitBounds(L.latLngBounds(pts.map(s=>s.ll)).pad(0.18));
+  dayMaps[di] = m;
+  setTimeout(()=>m.invalidateSize(), 60);
+  routeGeom(di, pts).then(geo=>{
+    if(geo){ m.removeLayer(dashed); L.polyline(geo,{color:'#1f4a3a',weight:4,opacity:.85}).addTo(m); }
+  }).catch(()=>{});
+}
+window.addEventListener('load', ()=>initDayMap(cur));
+
+// ---- build summary ----
+const S = TRIP.summary;
+const sum = document.createElement('section');
+sum.className='panel';
+sum.innerHTML = `
+  <div class="sumwrap">
+    <div class="kick">◆ The whole route</div>
+    <h2>Trip Summary</h2>
+    ${TRIP.days.map((day,i)=>{const r=day.sum; return `
+      <div class="srow">
+        <div class="h"><div><div class="d">Day ${i+1} · ${r.sd}</div><div class="dest">${r.dest}</div></div><div class="mi">${r.mi}</div></div>
+        <div class="lo">🛏 ${r.lo}</div>
+        <div class="ks">${r.ks}</div>
+      </div>`;}).join('')}
+    <div class="total"><b>${S.total.headline}</b>${S.total.sub}</div>
+    ${S.note?`<div class="ret">${S.note}</div>`:''}
+  </div>`;
+deck.appendChild(sum);
+
+// ---- tabs ----
+const LABELS = ['Start', ...TRIP.days.map((d,i)=>d.tab||String(i+1)), 'End'];
+const panels = [...deck.querySelectorAll('.panel')];
+LABELS.forEach((l,i)=>{
+  const b=document.createElement('button');
+  b.className='tab'+(i===0?' active':'');b.textContent=l;
+  b.onclick=()=>goTo(i);
+  tabs.appendChild(b);
+});
+
+// ---- navigation ----
+const prog=document.getElementById('prog'), ctr=document.getElementById('ctr'),
+      where=document.getElementById('where'), prev=document.getElementById('prev'), next=document.getElementById('next');
+let cur=0;
+const WHERE=['Cover', ...TRIP.days.map((d,i)=>`Day ${i+1} · ${d.short}`), 'Summary'];
+function goTo(i){ i=Math.max(0,Math.min(panels.length-1,i)); deck.scrollTo({left:i*deck.clientWidth,behavior:'smooth'}); }
+prev.onclick=()=>goTo(cur-1); next.onclick=()=>goTo(cur+1);
+
+function update(){
+  const i=Math.round(deck.scrollLeft/deck.clientWidth);
+  if(i!==cur){ cur=i;
+    [...tabs.children].forEach((t,x)=>t.classList.toggle('active',x===i));
+    panels.forEach((p,x)=>{ if(x===i) p.classList.add('show'); });
+  }
+  initDayMap(cur);
+  // stagger cards in active panel
+  const stops=panels[cur].querySelectorAll('.stop');
+  stops.forEach((s,x)=>s.style.transitionDelay=(0.05*x)+'s');
+  prog.style.width=((cur)/(panels.length-1)*100)+'%';
+  ctr.textContent=String(cur).padStart(2,'0')+' / '+String(panels.length-1).padStart(2,'0');
+  where.textContent=WHERE[cur];
+  prev.disabled=cur===0; next.disabled=cur===panels.length-1;
+  next.textContent = cur===panels.length-1 ? 'Done ✓' : 'Next ▶';
+}
+let raf, rafFb; deck.addEventListener('scroll',()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(update); clearTimeout(rafFb); rafFb=setTimeout(update,120); });
+window.addEventListener('resize',()=>goTo(cur));
+
+// ---- visited stamps ----
+deck.addEventListener('click',e=>{
+  const b=e.target.closest('[data-stamp]'); if(!b) return;
+  const id=b.getAttribute('data-stamp');
+  const card=deck.querySelector('.card[data-id="'+id+'"]');
+  const on=card.classList.toggle('done');
+  store[id]=on?1:0; if(!on) delete store[id]; save();
+});
+
+update();
+</script>
+</body>
+</html>

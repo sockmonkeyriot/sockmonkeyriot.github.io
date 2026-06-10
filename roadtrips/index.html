@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#163528">
+<title>Road Trips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f1e7d5;
+    --card:#faf4e8;
+    --ink:#2a2017;
+    --ink-soft:#7a6a55;
+    --pine:#1f4a3a;
+    --pine-deep:#15342a;
+    --amber:#d9802f;
+    --clay:#b1442a;
+    --line:rgba(42,32,23,.16);
+    --line-strong:rgba(42,32,23,.3);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{
+    font-family:var(--sans);color:var(--ink);
+    background:radial-gradient(120% 80% at 50% -10%, #244b3f 0%, #16332a 55%, #0f261f 100%) fixed;
+    min-height:100dvh;
+    display:flex;justify-content:center;
+  }
+  #page{
+    position:relative;
+    width:min(100vw,480px);
+    min-height:100dvh;
+    background:var(--paper);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+    display:flex;flex-direction:column;
+  }
+  @media(min-width:520px){
+    #page{margin:18px 0;min-height:calc(100dvh - 36px);border-radius:26px;border:1px solid rgba(0,0,0,.25);overflow:hidden;}
+  }
+  /* paper grain */
+  #page::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:50;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;opacity:.6;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:linear-gradient(170deg,#1f4a3a 0%,#15342a 60%,#0f261f 100%);
+    color:#f1e7d5;padding:24px 26px 22px;position:relative;overflow:hidden;
+  }
+  .sun{position:absolute;top:12px;right:-36px;width:130px;height:130px;border-radius:50%;
+    background:radial-gradient(circle,#e89a45 0%,#d9802f 55%,transparent 72%);opacity:.9;}
+  .ridge{position:absolute;left:0;right:0;bottom:-6px;height:60px;
+    background:
+      linear-gradient(135deg,transparent 49.6%,#0f261f 50%) -20px 0/110px 60px repeat-x,
+      linear-gradient(-135deg,transparent 49.6%,#0f261f 50%) 36px 0/140px 60px repeat-x;
+    opacity:.5;}
+  .hero .kick{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);position:relative;}
+  .hero h1{font-family:var(--serif);font-weight:900;font-size:36px;line-height:.94;margin:8px 0 0;position:relative;letter-spacing:-.01em;}
+
+  /* ---------- sections ---------- */
+  main{flex:1;padding:10px 18px 8px;}
+  .sec{display:flex;align-items:baseline;gap:10px;margin:22px 4px 4px;}
+  .sec .nm{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;}
+  .sec .dot{font-size:9px;position:relative;top:-1px;}
+  .sec.current .nm,.sec.current .dot{color:var(--amber);}
+  .sec.upcoming .nm,.sec.upcoming .dot{color:var(--pine);}
+  .sec.archived .nm,.sec.archived .dot{color:var(--ink-soft);}
+  .sec .rule{flex:1;border-top:1px dashed var(--line-strong);position:relative;top:-2px;}
+  .sec .n{font-family:var(--mono);font-size:10px;color:var(--ink-soft);}
+
+  /* ---------- trip rows ---------- */
+  .trip{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    text-decoration:none;color:var(--ink);
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:13px 15px;margin-top:10px;position:relative;
+    box-shadow:0 2px 0 var(--line),0 10px 22px -16px rgba(42,32,23,.5);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  a.trip:hover{transform:translateY(-2px);box-shadow:0 3px 0 var(--line),0 14px 26px -16px rgba(42,32,23,.55);}
+  .trip h3{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.12;margin:0;letter-spacing:.005em;}
+  .trip .when{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-top:5px;}
+  .trip .chev{font-family:var(--mono);font-size:14px;color:var(--amber);flex:0 0 auto;}
+  .trip.plan{opacity:.65;}
+  .trip.done-trip .go{background:#e8dcc4;color:#5d4f3c;}
+
+  .empty{
+    border:1.5px dashed var(--line-strong);border-radius:14px;margin-top:12px;
+    padding:18px 16px;text-align:center;
+    font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);
+  }
+  .err{margin:30px 10px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--clay);line-height:1.6;}
+
+  /* ---------- footer ---------- */
+  footer{
+    padding:22px 18px calc(20px + env(safe-area-inset-bottom));text-align:center;
+    font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div id="page">
+  <div class="hero">
+    <div class="sun"></div><div class="ridge"></div>
+    <div class="kick">◆ The van · Field guides</div>
+    <h1>Road Trips</h1>
+  </div>
+  <main id="main"></main>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const main = document.getElementById('main');
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function statusOf(t, today){
+  if(!t.start || !t.end) return 'upcoming';          // unplanned → upcoming
+  if(today < t.start) return 'upcoming';
+  if(today > t.end) return 'archived';
+  return 'current';
+}
+
+function metaLine(t){
+  const bits = [t.dates];
+  if(t.days)  bits.push(`${t.days} days`);
+  if(t.miles) bits.push(`~${t.miles.toLocaleString()} mi`);
+  if(!t.path) bits.push('In planning');
+  return bits.join(' · ');
+}
+
+function card(t, st){
+  const inner = `
+    <div>
+      <h3>${t.name}</h3>
+      <div class="when">${metaLine(t)}</div>
+    </div>
+    ${t.path?`<span class="chev">▸</span>`:''}`;
+  return t.path
+    ? `<a class="trip" href="${t.path}">${inner}</a>`
+    : `<div class="trip plan">${inner}</div>`;
+}
+
+function section(key, label, trips, emptyText){
+  const head = `<div class="sec ${key}">
+    <span class="dot">●</span><span class="nm">${label}</span>
+    <span class="rule"></span><span class="n">${trips.length}</span>
+  </div>`;
+  const body = trips.length
+    ? trips.map(t=>card(t, key)).join('')
+    : `<div class="empty">${emptyText}</div>`;
+  return head + body;
+}
+
+fetch('trips.json')
+  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data=>{
+    const today = todayISO();
+    const by = { current:[], upcoming:[], archived:[] };
+    data.trips.forEach(t=>by[statusOf(t,today)].push(t));
+
+    // soonest first for what's ahead (TBD dates last); most recent first for the shoebox
+    by.current.sort((a,b)=>a.start<b.start?-1:1);
+    by.upcoming.sort((a,b)=>!a.start?1:!b.start?-1:(a.start<b.start?-1:1));
+    by.archived.sort((a,b)=>a.end>b.end?-1:1);
+
+    main.innerHTML =
+      section('current','Current', by.current,'No wheels turning right now.') +
+      section('upcoming','Upcoming', by.upcoming,'Nothing on the calendar — yet.') +
+      section('archived','Archived', by.archived,'No trips in the shoebox yet.');
+
+    document.getElementById('foot').textContent =
+      `◆ roadtrips · v${data.version} · updated ${data.updated}`;
+  })
+  .catch(()=>{
+    main.innerHTML = `<div class="err">Couldn't load trips.json.<br>
+      If you opened this file directly, serve it over http<br>(it fetches the trip manifest).</div>`;
+  });
+</script>
+</body>
+</html>
