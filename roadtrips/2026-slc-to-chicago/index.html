@@ -127,6 +127,10 @@
   .daymeta{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
   .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 9px;border-radius:6px;background:#e8dcc4;color:#5d4f3c;display:inline-flex;align-items:center;gap:5px;}
   .chip.km{background:var(--pine);color:#f1e7d5;}
+  .chip.wx{background:#e3e6d8;color:#44523f;}
+  .chip.wx.hot{background:#f4d8bf;color:#9a4a1c;}
+  .chip.wx.cold{background:#dbe3e9;color:#3b5a6b;}
+  .chip.wx.alert{background:var(--clay);color:#faf4e8;font-weight:500;}
   .note{margin:13px 22px 4px;font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-soft);line-height:1.4;border-left:2px solid var(--amber);padding-left:11px;}
 
   /* ---------- day route map ---------- */
@@ -273,7 +277,7 @@ const TRIP = {
   },
 
   days: [
-    { dow:"Friday · Jun 12", route:"Salt Lake City → Vernal → Hayden, CO", miles:"~310 mi", time:"~5h30m drive",
+    { dow:"Friday · Jun 12", date:"2026-06-12", route:"Salt Lake City → Vernal → Hayden, CO", miles:"~310 mi", time:"~5h30m drive",
       short:"Hayden",
       note:"1 PM rollout — lunch at home, US-40 the whole way: Strawberry Reservoir, dinosaur country, then down the Yampa Valley. Sleep in Hayden; Steamboat waits for breakfast tomorrow.",
       sum:{ sd:"Fri 6/12", dest:"Hayden, CO", mi:"~310 mi", lo:"Yampa River SP HQ — reserved (~$43, showers)", ks:"1 PM rollout · Dinosaur Quarry shuttle (last out 5 PM) · Yampa Valley Brewing pizza" },
@@ -297,7 +301,7 @@ const TRIP = {
          alt:"~$43 all-in ($24 basic site + $10 res fee + $9 parks pass). Free options are thin tonight — CO rest areas officially ban overnighting, Steamboat enforces its in-town ban, and the Rabbit Ears campgrounds don't open till late June. The guaranteed site is worth it."}
       ]},
 
-    { dow:"Saturday · Jun 13", route:"Hayden → Steamboat (breakfast w/ Marc) → Denver → Limon, CO", miles:"~295 mi", time:"~6h drive",
+    { dow:"Saturday · Jun 13", date:"2026-06-13", route:"Hayden → Steamboat (breakfast w/ Marc) → Denver → Limon, CO", miles:"~295 mi", time:"~6h drive",
       short:"Limon",
       note:"30 easy minutes into Steamboat for breakfast with Marc, US-40 over Rabbit Ears & Berthoud passes to Denver, then I-70 east — a Denver night split by the drive.",
       sum:{ sd:"Sat 6/13", dest:"Limon, CO", mi:"~295 mi", lo:"Pilot/Flying J, Limon (free)", ks:"Beard & Braid w/ Marc · Rabbit Ears + Berthoud passes · Death & Co + RiNo walk-in dinner" },
@@ -332,7 +336,7 @@ const TRIP = {
          alt:"Stop early? Love's Travel Stop, Bennett — ~35 min east of Denver, 1191 S 1st St"}
       ]},
 
-    { dow:"Sunday · Jun 14", route:"Limon → Salina (Cozy Inn) → Lawrence, KS", miles:"~390 mi", time:"~5h15m drive",
+    { dow:"Sunday · Jun 14", date:"2026-06-14", route:"Limon → Salina (Cozy Inn) → Lawrence, KS", miles:"~390 mi", time:"~5h15m drive",
       short:"Lawrence",
       note:"I-70 east the whole way. A road-food landmark for lunch and a fun Mass Street night to finish.",
       sum:{ sd:"Sun 6/14", dest:"Lawrence, KS", mi:"~390 mi", lo:"Lawrence Service Area (free)", ks:"Cozy Inn sliders (Salina) · Eisenhower Library (Abilene) · Meadowlark + John Brown's" },
@@ -373,7 +377,7 @@ const TRIP = {
          alt:"Stay downtown & walk back — Riverfront garage (verify rules) · Backup: Walmart, 3300 Iowa St"}
       ]},
 
-    { dow:"Monday · Jun 15", route:"Lawrence → Kansas City — the full-day stay", miles:"~80 mi", time:"~1h30m total",
+    { dow:"Monday · Jun 15", date:"2026-06-15", route:"Lawrence → Kansas City — the full-day stay", miles:"~80 mi", time:"~1h30m total",
       short:"Kansas City",
       note:"The day the new schedule buys you. KC gets a real visit instead of a drive-by: burnt ends at open, a world-class (free) museum, an amaro bar, and a hearth-fired dinner.",
       sum:{ sd:"Mon 6/15", dest:"Kansas City — full day", mi:"~80 mi", lo:"Petro Oak Grove (free + showers)", ks:"Slap's at open · Nelson-Atkins (free, Mon-only) · Mitch e Amaro · Fox and Pearl fried-chicken night" },
@@ -411,7 +415,7 @@ const TRIP = {
          alt:"TA Oak Grove — across the interchange, 100 N Broadway St · Holiday Inn Express Oak Grove if a real bed calls (~$110)"}
       ]},
 
-    { dow:"Tuesday · Jun 16", route:"Oak Grove → Columbia → St. Louis, MO", miles:"~220 mi", time:"~3h45m drive",
+    { dow:"Tuesday · Jun 16", date:"2026-06-16", route:"Oak Grove → Columbia → St. Louis, MO", miles:"~220 mi", time:"~3h45m drive",
       short:"St. Louis",
       note:"A short cruise across Missouri — and the Tuesday arrival unlocks the St. Louis spots that were dark on the old Monday plan.",
       sum:{ sd:"Tue 6/16", dest:"St. Louis, MO", mi:"~220 mi", lo:"Pilot, Troy IL (free + showers)", ks:"Goldie's Bagels (Columbia) · Gateway Arch · Sado + Ted Drewes + Planter's House" },
@@ -453,7 +457,7 @@ const TRIP = {
          map:"https://www.google.com/maps/search/?api=1&query=Holiday+Inn+Express+Troy+IL"}
       ]},
 
-    { dow:"Wednesday · Jun 17", route:"Troy → Springfield (Route 66) → O'Hare → Logan Square", miles:"~285 mi", time:"~4h45m drive",
+    { dow:"Wednesday · Jun 17", date:"2026-06-17", route:"Troy → Springfield (Route 66) → O'Hare → Logan Square", miles:"~285 mi", time:"~4h45m drive",
       short:"Chicago",
       note:"Arrival day up the Route 66 corridor. TARGET: park the van by ~4:45 PM to make a 6 PM Logan Square meetup.",
       sum:{ sd:"Wed 6/17", dest:"Chicago (O'Hare → Logan Square)", mi:"~285 mi", lo:"— finish in the city", ks:"Cozy Dog (Springfield) · Lincoln Museum · van → Economy Lot G · Blue Line by 6 PM" },
@@ -571,6 +575,7 @@ TRIP.days.forEach((day, di)=>{
       <div class="dno">Day ${di+1} · ${day.dow}</div>
       <h2>${day.route}</h2>
       <div class="daymeta"><span class="chip km">▸ ${day.miles}</span><span class="chip">◷ ${day.time}</span></div>
+      <div class="daymeta" id="wx-d${di}" hidden></div>
     </div>
     <div class="note">${day.note}</div>
     ${day.stops.some(s=>s.ll)?`<div class="daymap" id="map-d${di}"></div>`:''}
@@ -676,6 +681,103 @@ function initCoverMap(){
   setTimeout(()=>{ m.invalidateSize(); m.fitBounds(bounds); }, 60);
 }
 window.addEventListener('load', ()=>{ initDayMap(cur); initCoverMap(); });
+
+// ---- per-day weather (Open-Meteo; degrades to nothing offline) ----
+// Forecast point = where the van sleeps that night (last mapped overnight/
+// hotel stop, else the day's last mapped stop). Day chip = the date's
+// "feels like" high (apparent temp: heat + humidity + wind). Night verdict
+// = fan-adjusted comfort over the 9 PM–6 AM window — the van has two fans
+// but no AC: moving air buys ~4 °F of perceived cooling (ASHRAE 55 / CBE
+// fans guidebook), only ~2 °F once dew point hits 70 °F (oppressive air;
+// sweat stops evaporating, per NWS). Hotel call: effective night temp
+// ≥75 °F, dew point ≥70 °F, or a 75 °F+ night with dew point ≥65 °F.
+// Hazard chips (storms, humidity, rain, gusts) render only when triggered.
+// Cached 3 h in localStorage; the row stays hidden when the date is past,
+// beyond the 16-day forecast window, or the fetch fails.
+const WXICON = c =>
+  c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':
+  c<=77?'❄️':c<=82?'🌧️':c<=86?'🌨️':'⛈️';
+function wxPoint(day){
+  return [...day.stops].reverse().find(s=>s.ll&&(s.t==='overnight'||s.t==='hotel'))
+      || [...day.stops].reverse().find(s=>s.ll) || null;
+}
+// night comfort: 'camp' | 'sticky' | 'hotel' from the night's max temp/dew point
+function nightVerdict(T, DP){
+  const eff = T - (DP < 70 ? 4 : 2);   // what two fans are worth
+  if (eff >= 75 || DP >= 70 || (T >= 75 && DP >= 65)) return 'hotel';
+  if (eff >= 70 || DP >= 65) return 'sticky';
+  return 'camp';
+}
+function stormBuckets(hrs){            // hourly indices (0 = midnight local) → when
+  const b = [];
+  if (hrs.some(h=>h>=6 && h<12))  b.push('AM');
+  if (hrs.some(h=>h>=12 && h<17)) b.push('PM');
+  if (hrs.some(h=>h>=17 && h<21)) b.push('eve');
+  if (hrs.some(h=>h<6 || h>=21))  b.push('night');
+  return b.join('/');
+}
+async function wxFetch(day){
+  const pt = wxPoint(day); if(!pt) return null;
+  const key = TRIP.meta.id+'_wx2_'+day.date;
+  try{ const c=JSON.parse(localStorage.getItem(key)); if(c && Date.now()-c.at<3*3600e3) return c; }catch(e){}
+  const end = new Date(day.date+'T12:00:00'); end.setDate(end.getDate()+1);
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${pt.ll[0]}&longitude=${pt.ll[1]}`
+    + `&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,windgusts_10m_max`
+    + `&hourly=temperature_2m,dewpoint_2m,weathercode`
+    + `&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto`
+    + `&start_date=${day.date}&end_date=${end.toISOString().slice(0,10)}`;
+  const r = await fetch(u); if(!r.ok) return null;
+  const j = await r.json(); const d = j.daily, h = j.hourly || {};
+  if(!d || d.temperature_2m_max[0]==null) return null;
+  // hourly indices are local: 0–23 = the date, 24–47 = the next day.
+  // Night window = 21–30 (9 PM–6 AM, spans midnight); day window = 8–20.
+  const slice = (a,s,e)=>(a||[]).slice(s,e).filter(v=>v!=null);
+  const nT  = slice(h.temperature_2m, 21, 31);
+  const nDP = slice(h.dewpoint_2m,    21, 31);
+  const dDP = slice(h.dewpoint_2m,     8, 21);
+  const storms = [];
+  (h.weathercode||[]).slice(0,31).forEach((c,i)=>{ if(c>=95) storms.push(i); });
+  const wx = { at: Date.now(), code: d.weathercode[0],
+               hi: Math.round(d.temperature_2m_max[0]),
+               feels: Math.round(d.apparent_temperature_max[0] ?? d.temperature_2m_max[0]),
+               lo: Math.round(d.temperature_2m_min[1] ?? d.temperature_2m_min[0]),
+               pp: d.precipitation_probability_max[0],
+               gust: Math.round(d.windgusts_10m_max[0] ?? 0),
+               nT:  nT.length  ? Math.round(Math.max(...nT))  : null,
+               nDP: nDP.length ? Math.round(Math.max(...nDP)) : null,
+               dDP: dDP.length ? Math.round(Math.max(...dDP)) : null,
+               storms };
+  try{ localStorage.setItem(key, JSON.stringify(wx)); }catch(e){}
+  return wx;
+}
+function loadWeather(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  TRIP.days.forEach((day, di)=>{
+    if(!day.date) return;
+    const d = new Date(day.date+'T12:00:00');
+    const ahead = (d-today)/864e5;
+    if(isNaN(ahead) || ahead<0 || ahead>15) return;
+    wxFetch(day).then(wx=>{
+      if(!wx) return;
+      const el = document.getElementById('wx-d'+di); if(!el) return;
+      const chips = [];
+      const hotDay = wx.feels>=85;
+      const showFeels = Math.abs(wx.feels-wx.hi)>=3;   // surface "feels" only when humidity/wind move it
+      chips.push(`<span class="chip wx${hotDay?' hot':''}">${WXICON(wx.code)} ${showFeels?wx.feels+'° feels':wx.hi+'° day'}${hotDay?' · find AC':''}</span>`);
+      const v = (wx.nT!=null && wx.nDP!=null) ? nightVerdict(wx.nT, wx.nDP)
+              : (wx.lo>=70?'hotel':wx.lo>=65?'sticky':'camp');   // hourly missing → fall back to the low
+      chips.push(`<span class="chip wx${v!=='camp'?' hot':wx.lo<=32?' cold':''}">🌙 ${wx.lo}° night${v==='sticky'?' · sticky':''}${wx.lo<=32?' · freezing':''}</span>`);
+      if(v==='hotel') chips.push(`<span class="chip wx alert">🏨 AC night</span>`);
+      if(wx.storms.length) chips.push(`<span class="chip wx hot">⚡ storms ${stormBuckets(wx.storms)}</span>`);
+      if(wx.dDP!=null && wx.dDP>=65) chips.push(`<span class="chip wx${wx.dDP>=70?' hot':''}">💧 ${wx.dDP>=70?'oppressive':'humid'} · ${wx.dDP}° dp</span>`);
+      if(wx.pp>=30) chips.push(`<span class="chip wx">☔ ${wx.pp}%</span>`);
+      if(wx.gust>=30) chips.push(`<span class="chip wx">💨 gusts ${wx.gust}</span>`);
+      el.innerHTML = chips.join('');
+      el.hidden = false;
+    }).catch(()=>{});
+  });
+}
+loadWeather();
 
 // ---- build summary ----
 const S = TRIP.summary;

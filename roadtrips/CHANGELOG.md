@@ -15,6 +15,54 @@ landing-page footer.
 
 ---
 
+## v0.7.0 — 2026-06-11
+
+Hazard chips + a fan-adjusted overnight comfort verdict (the van has two
+fans, no AC — the question every evening is camp vs. hotel).
+
+**Added**
+- **Night-comfort verdict** — camp / sticky / hotel — computed from hourly
+  forecast over the 9 PM–6 AM window at the overnight stop: max temp minus a
+  fan credit (4 °F of perceived cooling per ASHRAE 55 / CBE fans guidebook;
+  only 2 °F once dew point hits 70 °F, where evaporative cooling dies — NWS
+  dew-point scale), crossed with max dew point. **Hotel** (effective ≥75 °F,
+  dew point ≥70 °F, or 75 °F+ with dew point ≥65 °F) renders a clay
+  **`🏨 AC night` alert chip**; **sticky** warns on the night chip. Replaces
+  the naive `low ≥65 °F → hotel?` flag. Thresholds documented in
+  TEMPLATE.md.
+- **Hazard chips**, rendered only when triggered: `⚡ storms AM/PM/eve/night`
+  (any thunderstorm-coded hour, bucketed by time of day), `💧 humid · N° dp`
+  (daytime dew point ≥65 °F; "oppressive" ≥70 °F), `💨 gusts N` (≥30 mph —
+  high-profile-vehicle warning). Rain chip (≥30%) unchanged.
+- **Day chip is humidity-aware**: uses Open-Meteo's apparent ("feels like")
+  high when it diverges ≥3 °F from the raw high; the `· find AC` flag now
+  keys off apparent temp.
+
+**Changed**
+- Weather fetch adds hourly temp/dew point/weathercode and daily apparent
+  max + gusts (still one request per day). Cache key prefix bumped
+  `_wx_` → `_wx2_` so stale v0.6.0 entries are ignored.
+- New `.chip.wx.alert` style (clay background) for the AC-night call.
+
+## v0.6.0 — 2026-06-11
+
+Live day/night weather on every day panel.
+
+**Added**
+- **Weather row** in each day header (under the miles/time chips): a day chip
+  (condition emoji + the date's high — ≥85 °F flags `· find AC`, since the van
+  has none), a night chip (the overnight low at where the van sleeps, read
+  from the *next* morning's min because the night spans midnight — ≥65 °F
+  flags `· hotel?`, ≤32 °F flags `· freezing`), and a rain chip when
+  precipitation probability hits 30%.
+- Forecast point = the day's last mapped `overnight`/`hotel` stop (else its
+  last mapped stop). Data from **Open-Meteo** (free, no key), °F, cached 3h
+  in `localStorage`. Same graceful degradation as the maps: offline, past
+  dates, or beyond the ~16-day forecast window → the row simply doesn't
+  render, so archived trips stay clean.
+- New schema field `days[].date` (ISO) — drives the weather row; omitting it
+  opts the day out. Added to SLC→Chicago (Jun 12–17).
+
 ## v0.5.0 — 2026-06-10
 
 Day maps now show the full day: START → numbered stops → END.

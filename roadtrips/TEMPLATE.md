@@ -48,7 +48,7 @@ A trip page is a horizontal swipe deck of panels:
   (miles, days, span), swipe hint. Sunrise + ridge art, pine gradient.
   No subtitle.
 - **Day panel:** day header (Day N + date, route as the headline, miles/time
-  chips), an italic editor's note (the day's shape and any timing logic), an
+  chips, and a **weather row** — see below), an italic editor's note (the day's shape and any timing logic), an
   embedded **day route map** (Leaflet + OpenStreetMap). The map shows the
   day's full journey: an amber **START** pill where the day begins (the
   previous day's overnight, or `meta.start` on day 1), numbered markers 1…N
@@ -107,6 +107,58 @@ stop has one).
 - Drive math in the day header chips (`~334 mi`, `~6h drive`); timing
   anchors ("park by ~4:45 PM") in `when`/`why`.
 
+## Weather row
+
+Each day header carries a live forecast row (the van has **two fans but no
+AC**, so weather decides both where the day happens and where the night
+happens). Chips, in order — the first two always render, the rest only when
+triggered:
+
+- **Day chip** — condition emoji + the date's high. Uses the **apparent
+  ("feels like") high** when humidity/wind move it ≥3 °F from the raw high
+  (labeled `° feels`); ≥85 °F apparent flags ` · find AC` in warning colors
+  (a parked van runs 20–30 °F over ambient).
+- **Night chip** — the overnight low (from the *next* morning's min — the
+  night spans midnight) plus the comfort verdict below: `· sticky` in
+  warning colors, or ` · freezing` in cold colors at ≤32 °F.
+- **`🏨 AC night`** — the headline call, in alert colors (clay): tonight the
+  van won't sleep even with both fans; book a room.
+- **`⚡ storms <when>`** — any thunderstorm-coded hour that date, bucketed
+  AM / PM / eve / night (lightning at a dispersed site is a plan-changer).
+- **`💧 humid/oppressive · N° dp`** — daytime max dew point ≥65 °F;
+  "oppressive" + warning colors at ≥70 °F.
+- **`☔ N%`** — max precipitation probability, shown at ≥30%.
+- **`💨 gusts N`** — daily max gusts ≥30 mph (high-profile-vehicle warning).
+
+### Night-comfort model (camp / sticky / hotel)
+
+Over the 9 PM–6 AM window at the forecast point, take the hourly **max temp
+`T`** and **max dew point `DP`**, then `effT = T − fan credit`, where the
+fan credit is **4 °F** (moving air ≈ 0.5 m/s at the bed, per the ASHRAE 55
+elevated-air-speed method / [CBE fans guidebook](https://cbe-berkeley.gitbook.io/fans-guidebook/full-guidebook/elevated-air-speed-and-thermal-comfort))
+dropping to **2 °F when DP ≥ 70 °F** — at oppressive dew points sweat stops
+evaporating and airflow loses most of its value
+([NWS dew-point scale](https://www.weather.gov/arx/why_dewpoint_vs_humidity)).
+A fan-ventilated van tracks close to ambient overnight, so the outdoor
+forecast is the proxy for in-van conditions.
+
+| Verdict | Rule | UI |
+|---|---|---|
+| **Camp** | effT < 70 °F and DP < 65 °F | night chip, normal colors |
+| **Sticky** | not Camp, effT < 75 °F and DP < 70 °F | night chip warning colors + `· sticky` |
+| **Hotel** | effT ≥ 75 °F, or DP ≥ 70 °F, or (T ≥ 75 °F and DP ≥ 65 °F) | + `🏨 AC night` alert chip |
+
+If hourly data is unavailable the verdict falls back to the nightly low
+(≥70 °F → hotel, ≥65 °F → sticky).
+
+Mechanics: requires the day's `date` field (ISO). The forecast point is
+where the van sleeps — the day's last mapped `overnight`/`hotel` stop, else
+its last mapped stop. Data from Open-Meteo (free, keyless), one call per day
+(daily + hourly), °F/mph, cached 3h in `localStorage`. Graceful degradation
+like the maps: the row stays hidden when offline, when the date is past, or
+beyond the ~16-day forecast window — so archived trips simply show no
+weather.
+
 ## TRIP data schema
 
 ```js
@@ -132,6 +184,7 @@ const TRIP = {
   days: [
     {
       dow: "Friday · Jun 12",       // day header date line
+      date: "2026-06-12",           // ISO date — drives the weather row (omit = no weather)
       route: "SLC → Vernal → Steamboat",  // day headline
       miles: "~334 mi", time: "~6h drive",
       note: "Italic editor's note for the day.",
